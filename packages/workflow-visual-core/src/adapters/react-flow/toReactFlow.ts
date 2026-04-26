@@ -11,16 +11,8 @@ import type {
 
 // ── Node type → React Flow type mapping ──────────────────
 
-function mapNodeType(nodeType: NodeType): string {
-  switch (nodeType) {
-    case "start":
-    case "end":
-      return "rounded";
-    case "decision":
-      return "diamond";
-    default:
-      return "default";
-  }
+function mapNodeType(_nodeType: NodeType): string {
+  return "default";
 }
 
 // ── Node style hints by type ──────────────────────────────

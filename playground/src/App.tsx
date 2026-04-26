@@ -578,12 +578,14 @@ export default function App() {
             )}
 
             {activeTab === "reactflow" && (
-              <ReactFlow nodes={rfNodes} edges={rfEdges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange}
-                fitView fitViewOptions={{ padding: 0.3 }} style={{ background: "var(--surface2)" }} proOptions={{ hideAttribution: false }}>
-                <Background color="#2a2a30" gap={20} size={1} />
-                <Controls style={{ background: "var(--surface)", border: "1px solid var(--border)" }} />
-                <MiniMap style={{ background: "var(--surface)", border: "1px solid var(--border)" }} nodeColor="#6e56cf" maskColor="rgba(0,0,0,0.6)" />
-              </ReactFlow>
+              <div style={{ width: "100%", height: "100%", background: "#1c1c20" }}>
+                <ReactFlow nodes={rfNodes} edges={rfEdges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange}
+                  fitView fitViewOptions={{ padding: 0.3 }} style={{ width: "100%", height: "100%", background: "#1c1c20" }} proOptions={{ hideAttribution: false }}>
+                  <Background color="#2a2a30" gap={20} size={1} />
+                  <Controls style={{ background: "#141416", border: "1px solid #2a2a30" }} />
+                  <MiniMap style={{ background: "#141416", border: "1px solid #2a2a30" }} nodeColor="#6e56cf" maskColor="rgba(0,0,0,0.6)" />
+                </ReactFlow>
+              </div>
             )}
 
             {activeTab === "json-out" && (
