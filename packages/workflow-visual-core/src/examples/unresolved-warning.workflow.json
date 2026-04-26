@@ -1,0 +1,35 @@
+{
+  "graphId": "unresolved-warning-001",
+  "title": "Vendor Onboarding — Partially Mapped",
+  "description": "Workflow with unresolved steps and assumptions flagged for review",
+  "version": "1.0.0",
+  "graphType": "workflow",
+  "direction": "TD",
+  "nodes": [
+    { "id": "start", "label": "Vendor Application", "nodeType": "start" },
+    { "id": "initial_review", "label": "Initial Review", "nodeType": "step", "status": "confirmed" },
+    { "id": "legal_check", "label": "Legal Compliance Check", "nodeType": "step", "status": "assumed", "markers": ["ASSUMED: process unclear"] },
+    { "id": "approval_gate", "label": "Procurement Approval", "nodeType": "approval", "status": "unresolved", "markers": ["WHO approves this?", "THRESHOLD unknown"] },
+    { "id": "system_setup", "label": "ERP System Setup", "nodeType": "system", "status": "external_unvalidated" },
+    { "id": "warning_node", "label": "Dual Entry Risk", "nodeType": "warning", "description": "Manual data entry at this step creates duplicate record risk" },
+    { "id": "onboarded", "label": "Vendor Active", "nodeType": "end" },
+    { "id": "rejected", "label": "Application Rejected", "nodeType": "end" }
+  ],
+  "edges": [
+    { "id": "e1", "from": "start", "to": "initial_review", "edgeType": "sequence" },
+    { "id": "e2", "from": "initial_review", "to": "legal_check", "edgeType": "sequence", "status": "confirmed" },
+    { "id": "e3", "from": "legal_check", "to": "approval_gate", "edgeType": "sequence", "status": "assumed" },
+    { "id": "e4", "from": "approval_gate", "to": "system_setup", "edgeType": "approval", "label": "Approved", "status": "unresolved" },
+    { "id": "e5", "from": "approval_gate", "to": "rejected", "edgeType": "conditional", "condition": "Rejected" },
+    { "id": "e6", "from": "system_setup", "to": "warning_node", "edgeType": "exception", "label": "Manual entry required" },
+    { "id": "e7", "from": "warning_node", "to": "onboarded", "edgeType": "sequence" }
+  ],
+  "warnings": [
+    "Approval threshold not confirmed with Procurement team",
+    "ERP setup process not validated — based on assumed standard procedure"
+  ],
+  "unresolvedItems": [
+    "Who is the approver for Procurement?",
+    "Is there an automated ERP provisioning API?"
+  ]
+}

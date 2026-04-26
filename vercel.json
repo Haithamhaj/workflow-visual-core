@@ -1,0 +1,6 @@
+{
+  "buildCommand": "npm run build --workspace=packages/workflow-visual-core && npm run build --workspace=playground",
+  "outputDirectory": "playground/dist",
+  "installCommand": "npm install",
+  "framework": "vite"
+}

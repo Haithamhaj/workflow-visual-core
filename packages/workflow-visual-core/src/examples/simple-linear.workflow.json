@@ -1,0 +1,23 @@
+{
+  "graphId": "simple-linear-001",
+  "title": "Simple Order Processing Workflow",
+  "description": "A basic linear workflow for processing customer orders",
+  "version": "1.0.0",
+  "graphType": "workflow",
+  "direction": "TD",
+  "nodes": [
+    { "id": "start", "label": "Order Received", "nodeType": "start" },
+    { "id": "validate", "label": "Validate Order", "nodeType": "step", "status": "confirmed" },
+    { "id": "inventory", "label": "Check Inventory", "nodeType": "step", "status": "confirmed" },
+    { "id": "process", "label": "Process Payment", "nodeType": "step", "status": "confirmed" },
+    { "id": "ship", "label": "Ship Order", "nodeType": "step", "status": "confirmed" },
+    { "id": "end", "label": "Order Completed", "nodeType": "end" }
+  ],
+  "edges": [
+    { "id": "e1", "from": "start", "to": "validate", "edgeType": "sequence" },
+    { "id": "e2", "from": "validate", "to": "inventory", "edgeType": "sequence" },
+    { "id": "e3", "from": "inventory", "to": "process", "edgeType": "sequence" },
+    { "id": "e4", "from": "process", "to": "ship", "edgeType": "sequence" },
+    { "id": "e5", "from": "ship", "to": "end", "edgeType": "sequence" }
+  ]
+}

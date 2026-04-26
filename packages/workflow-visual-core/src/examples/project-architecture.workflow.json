@@ -1,0 +1,37 @@
+{
+  "graphId": "arch-nextai-001",
+  "title": "Next-Step AI — System Architecture",
+  "description": "Architecture map for the Next-Step AI companion platform",
+  "version": "1.0.0",
+  "graphType": "architecture",
+  "direction": "TD",
+  "nodes": [
+    { "id": "user", "label": "User", "nodeType": "external", "layer": "client" },
+    { "id": "telegram", "label": "Telegram Bot Interface", "nodeType": "interface", "layer": "client" },
+    { "id": "observer", "label": "Observer Layer", "nodeType": "system", "layer": "core", "description": "Answers then opens unseen angles" },
+    { "id": "rag", "label": "RAG Engine", "nodeType": "system", "layer": "core" },
+    { "id": "context_agg", "label": "Local Context Aggregator", "nodeType": "system", "layer": "core" },
+    { "id": "dynamic_prompt", "label": "Dynamic System Prompt Builder", "nodeType": "system", "layer": "core" },
+    { "id": "llm_router", "label": "LLM Router", "nodeType": "system", "layer": "core" },
+    { "id": "gpt5", "label": "GPT-5.4 (Primary)", "nodeType": "external", "layer": "models" },
+    { "id": "glm", "label": "GLM-4 (Heavy Reading)", "nodeType": "external", "layer": "models" },
+    { "id": "qwen", "label": "Qwen3.5:4b (Fallback)", "nodeType": "external", "layer": "models" },
+    { "id": "memory_store", "label": "Memory Store", "nodeType": "document", "layer": "storage" },
+    { "id": "vector_db", "label": "Vector DB", "nodeType": "document", "layer": "storage" }
+  ],
+  "edges": [
+    { "id": "e1", "from": "user", "to": "telegram", "edgeType": "sequence", "label": "Messages" },
+    { "id": "e2", "from": "telegram", "to": "observer", "edgeType": "sequence" },
+    { "id": "e3", "from": "observer", "to": "context_agg", "edgeType": "dependency" },
+    { "id": "e4", "from": "observer", "to": "rag", "edgeType": "dependency" },
+    { "id": "e5", "from": "context_agg", "to": "dynamic_prompt", "edgeType": "sequence" },
+    { "id": "e6", "from": "rag", "to": "dynamic_prompt", "edgeType": "sequence" },
+    { "id": "e7", "from": "dynamic_prompt", "to": "llm_router", "edgeType": "sequence" },
+    { "id": "e8", "from": "llm_router", "to": "gpt5", "edgeType": "conditional", "condition": "Primary" },
+    { "id": "e9", "from": "llm_router", "to": "glm", "edgeType": "conditional", "condition": "Heavy read" },
+    { "id": "e10", "from": "llm_router", "to": "qwen", "edgeType": "conditional", "condition": "Fallback" },
+    { "id": "e11", "from": "rag", "to": "vector_db", "edgeType": "reference" },
+    { "id": "e12", "from": "context_agg", "to": "memory_store", "edgeType": "reference" },
+    { "id": "e13", "from": "observer", "to": "telegram", "edgeType": "feedback", "label": "Response" }
+  ]
+}

@@ -1,0 +1,162 @@
+export const EXAMPLES: Record<string, string> = {
+  "Simple Linear": JSON.stringify(
+    {
+      graphId: "simple-linear-001",
+      title: "Order Processing",
+      description: "A basic linear workflow",
+      version: "1.0.0",
+      graphType: "workflow",
+      direction: "TD",
+      nodes: [
+        { id: "start", label: "Order Received", nodeType: "start" },
+        { id: "validate", label: "Validate Order", nodeType: "step", status: "confirmed" },
+        { id: "inventory", label: "Check Inventory", nodeType: "step", status: "confirmed" },
+        { id: "process", label: "Process Payment", nodeType: "step", status: "confirmed" },
+        { id: "ship", label: "Ship Order", nodeType: "step", status: "confirmed" },
+        { id: "end", label: "Completed", nodeType: "end" },
+      ],
+      edges: [
+        { id: "e1", from: "start", to: "validate", edgeType: "sequence" },
+        { id: "e2", from: "validate", to: "inventory", edgeType: "sequence" },
+        { id: "e3", from: "inventory", to: "process", edgeType: "sequence" },
+        { id: "e4", from: "process", to: "ship", edgeType: "sequence" },
+        { id: "e5", from: "ship", to: "end", edgeType: "sequence" },
+      ],
+    },
+    null,
+    2
+  ),
+
+  "Decision Tree": JSON.stringify(
+    {
+      graphId: "decision-001",
+      title: "Loan Approval",
+      version: "1.0.0",
+      graphType: "decision_tree",
+      direction: "TD",
+      nodes: [
+        { id: "start", label: "Application", nodeType: "start" },
+        { id: "credit", label: "Credit Check", nodeType: "step" },
+        { id: "q1", label: "Score ≥ 650?", nodeType: "decision" },
+        { id: "income", label: "Verify Income", nodeType: "step" },
+        { id: "q2", label: "Ratio < 40%?", nodeType: "decision" },
+        { id: "review", label: "Manual Review", nodeType: "approval", status: "assumed" },
+        { id: "approved", label: "Approved ✓", nodeType: "end" },
+        { id: "rejected", label: "Rejected ✗", nodeType: "end" },
+      ],
+      edges: [
+        { id: "e1", from: "start", to: "credit" },
+        { id: "e2", from: "credit", to: "q1" },
+        { id: "e3", from: "q1", to: "income", edgeType: "conditional", condition: "Yes" },
+        { id: "e4", from: "q1", to: "rejected", edgeType: "conditional", condition: "No" },
+        { id: "e5", from: "income", to: "q2" },
+        { id: "e6", from: "q2", to: "approved", edgeType: "conditional", condition: "Yes" },
+        { id: "e7", from: "q2", to: "review", edgeType: "conditional", condition: "Borderline" },
+        { id: "e8", from: "q2", to: "rejected", edgeType: "conditional", condition: "No" },
+        { id: "e9", from: "review", to: "approved", label: "Approved" },
+        { id: "e10", from: "review", to: "rejected", label: "Rejected" },
+      ],
+    },
+    null,
+    2
+  ),
+
+  "Cross-Dept Handoff": JSON.stringify(
+    {
+      graphId: "handoff-001",
+      title: "Product Launch Handoffs",
+      version: "1.0.0",
+      graphType: "workflow",
+      direction: "LR",
+      nodes: [
+        { id: "start", label: "Launch Decision", nodeType: "start" },
+        { id: "build", label: "Build Feature", nodeType: "step", lane: "Engineering" },
+        { id: "qa", label: "QA & Testing", nodeType: "step", lane: "Engineering" },
+        { id: "h1", label: "→ Marketing", nodeType: "handoff" },
+        { id: "content", label: "Create Content", nodeType: "step", lane: "Marketing" },
+        { id: "h2", label: "→ Sales", nodeType: "handoff" },
+        { id: "brief", label: "Sales Brief", nodeType: "step", lane: "Sales" },
+        { id: "end", label: "Launched 🚀", nodeType: "end" },
+      ],
+      edges: [
+        { id: "e1", from: "start", to: "build" },
+        { id: "e2", from: "build", to: "qa" },
+        { id: "e3", from: "qa", to: "h1", edgeType: "handoff", label: "Feature Ready" },
+        { id: "e4", from: "h1", to: "content" },
+        { id: "e5", from: "content", to: "h2", edgeType: "handoff", label: "Content Ready" },
+        { id: "e6", from: "h2", to: "brief" },
+        { id: "e7", from: "brief", to: "end" },
+      ],
+    },
+    null,
+    2
+  ),
+
+  "With Warnings": JSON.stringify(
+    {
+      graphId: "warnings-001",
+      title: "Vendor Onboarding — Partial Map",
+      version: "1.0.0",
+      graphType: "workflow",
+      direction: "TD",
+      nodes: [
+        { id: "start", label: "Vendor Application", nodeType: "start" },
+        { id: "review", label: "Initial Review", nodeType: "step", status: "confirmed" },
+        { id: "legal", label: "Legal Check", nodeType: "step", status: "assumed", markers: ["ASSUMED: process unclear"] },
+        { id: "approval", label: "Procurement Approval", nodeType: "approval", status: "unresolved", markers: ["WHO approves?", "THRESHOLD unknown"] },
+        { id: "erp", label: "ERP Setup", nodeType: "system", status: "external_unvalidated" },
+        { id: "risk", label: "Dual Entry Risk", nodeType: "warning" },
+        { id: "done", label: "Vendor Active", nodeType: "end" },
+        { id: "rejected", label: "Rejected", nodeType: "end" },
+      ],
+      edges: [
+        { id: "e1", from: "start", to: "review" },
+        { id: "e2", from: "review", to: "legal" },
+        { id: "e3", from: "legal", to: "approval", status: "assumed" },
+        { id: "e4", from: "approval", to: "erp", edgeType: "approval", label: "Approved", status: "unresolved" },
+        { id: "e5", from: "approval", to: "rejected", edgeType: "conditional", condition: "Rejected" },
+        { id: "e6", from: "erp", to: "risk", edgeType: "exception" },
+        { id: "e7", from: "risk", to: "done" },
+      ],
+      warnings: ["Approval threshold not confirmed", "ERP setup not validated"],
+      unresolvedItems: ["Who approves?", "Automated ERP API?"],
+    },
+    null,
+    2
+  ),
+
+  "Architecture Map": JSON.stringify(
+    {
+      graphId: "arch-001",
+      title: "Next-Step AI Architecture",
+      version: "1.0.0",
+      graphType: "architecture",
+      direction: "TD",
+      nodes: [
+        { id: "user", label: "User", nodeType: "external" },
+        { id: "tg", label: "Telegram Bot", nodeType: "interface" },
+        { id: "observer", label: "Observer Layer", nodeType: "system", description: "Answers + opens unseen angles" },
+        { id: "rag", label: "RAG Engine", nodeType: "system" },
+        { id: "ctx", label: "Context Aggregator", nodeType: "system" },
+        { id: "router", label: "LLM Router", nodeType: "system" },
+        { id: "gpt5", label: "GPT-5.4", nodeType: "external", layer: "models" },
+        { id: "qwen", label: "Qwen3.5:4b", nodeType: "external", layer: "models" },
+        { id: "memory", label: "Memory Store", nodeType: "document" },
+      ],
+      edges: [
+        { id: "e1", from: "user", to: "tg", label: "Message" },
+        { id: "e2", from: "tg", to: "observer" },
+        { id: "e3", from: "observer", to: "rag", edgeType: "dependency" },
+        { id: "e4", from: "observer", to: "ctx", edgeType: "dependency" },
+        { id: "e5", from: "rag", to: "router" },
+        { id: "e6", from: "ctx", to: "router" },
+        { id: "e7", from: "router", to: "gpt5", edgeType: "conditional", condition: "Primary" },
+        { id: "e8", from: "router", to: "qwen", edgeType: "conditional", condition: "Fallback" },
+        { id: "e9", from: "ctx", to: "memory", edgeType: "reference" },
+        { id: "e10", from: "observer", to: "tg", edgeType: "feedback", label: "Response" },
+      ],
+    },
+    null,
+    2
+  ),
+};

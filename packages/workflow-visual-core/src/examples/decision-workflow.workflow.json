@@ -1,0 +1,30 @@
+{
+  "graphId": "decision-workflow-001",
+  "title": "Loan Approval Decision Tree",
+  "description": "Decision-based workflow for approving or rejecting a loan application",
+  "version": "1.0.0",
+  "graphType": "decision_tree",
+  "direction": "TD",
+  "nodes": [
+    { "id": "start", "label": "Application Submitted", "nodeType": "start" },
+    { "id": "credit_check", "label": "Credit Score Check", "nodeType": "step" },
+    { "id": "credit_decision", "label": "Score >= 650?", "nodeType": "decision" },
+    { "id": "income_check", "label": "Verify Income", "nodeType": "step" },
+    { "id": "income_decision", "label": "Debt Ratio < 40%?", "nodeType": "decision" },
+    { "id": "manual_review", "label": "Manual Underwriter Review", "nodeType": "approval", "status": "assumed" },
+    { "id": "approved", "label": "Loan Approved", "nodeType": "end" },
+    { "id": "rejected", "label": "Loan Rejected", "nodeType": "end" }
+  ],
+  "edges": [
+    { "id": "e1", "from": "start", "to": "credit_check", "edgeType": "sequence" },
+    { "id": "e2", "from": "credit_check", "to": "credit_decision", "edgeType": "sequence" },
+    { "id": "e3", "from": "credit_decision", "to": "income_check", "edgeType": "conditional", "condition": "Yes" },
+    { "id": "e4", "from": "credit_decision", "to": "rejected", "edgeType": "conditional", "condition": "No" },
+    { "id": "e5", "from": "income_check", "to": "income_decision", "edgeType": "sequence" },
+    { "id": "e6", "from": "income_decision", "to": "approved", "edgeType": "conditional", "condition": "Yes" },
+    { "id": "e7", "from": "income_decision", "to": "manual_review", "edgeType": "conditional", "condition": "Borderline" },
+    { "id": "e8", "from": "income_decision", "to": "rejected", "edgeType": "conditional", "condition": "No" },
+    { "id": "e9", "from": "manual_review", "to": "approved", "edgeType": "approval", "label": "Approved" },
+    { "id": "e10", "from": "manual_review", "to": "rejected", "edgeType": "approval", "label": "Rejected" }
+  ]
+}

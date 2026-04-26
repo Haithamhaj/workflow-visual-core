@@ -1,0 +1,36 @@
+{
+  "graphId": "cross-dept-001",
+  "title": "Product Launch — Cross-Department Handoff",
+  "description": "Workflow showing how product launch work moves across Sales, Marketing, and Engineering",
+  "version": "1.0.0",
+  "graphType": "workflow",
+  "direction": "LR",
+  "nodes": [
+    { "id": "start", "label": "Launch Decision", "nodeType": "start" },
+    { "id": "eng_build", "label": "Build Feature", "nodeType": "step", "lane": "Engineering" },
+    { "id": "eng_qa", "label": "QA & Testing", "nodeType": "step", "lane": "Engineering" },
+    { "id": "handoff_mktg", "label": "Hand to Marketing", "nodeType": "handoff" },
+    { "id": "mktg_content", "label": "Create Launch Content", "nodeType": "step", "lane": "Marketing" },
+    { "id": "mktg_campaign", "label": "Set Up Campaign", "nodeType": "step", "lane": "Marketing" },
+    { "id": "handoff_sales", "label": "Hand to Sales", "nodeType": "handoff" },
+    { "id": "sales_brief", "label": "Sales Briefing", "nodeType": "step", "lane": "Sales" },
+    { "id": "sales_outreach", "label": "Customer Outreach", "nodeType": "step", "lane": "Sales" },
+    { "id": "end", "label": "Launch Complete", "nodeType": "end" }
+  ],
+  "edges": [
+    { "id": "e1", "from": "start", "to": "eng_build", "edgeType": "sequence" },
+    { "id": "e2", "from": "eng_build", "to": "eng_qa", "edgeType": "sequence" },
+    { "id": "e3", "from": "eng_qa", "to": "handoff_mktg", "edgeType": "handoff", "label": "Feature Ready" },
+    { "id": "e4", "from": "handoff_mktg", "to": "mktg_content", "edgeType": "sequence" },
+    { "id": "e5", "from": "mktg_content", "to": "mktg_campaign", "edgeType": "sequence" },
+    { "id": "e6", "from": "mktg_campaign", "to": "handoff_sales", "edgeType": "handoff", "label": "Campaign Ready" },
+    { "id": "e7", "from": "handoff_sales", "to": "sales_brief", "edgeType": "sequence" },
+    { "id": "e8", "from": "sales_brief", "to": "sales_outreach", "edgeType": "sequence" },
+    { "id": "e9", "from": "sales_outreach", "to": "end", "edgeType": "sequence" }
+  ],
+  "lanes": [
+    { "id": "Engineering", "label": "Engineering" },
+    { "id": "Marketing", "label": "Marketing" },
+    { "id": "Sales", "label": "Sales" }
+  ]
+}

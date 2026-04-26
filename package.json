@@ -1,0 +1,12 @@
+{
+  "name": "workflow-visual-monorepo",
+  "private": true,
+  "workspaces": ["packages/*", "playground"],
+  "scripts": {
+    "build": "npm run build --workspace=packages/workflow-visual-core",
+    "test": "npm run test --workspace=packages/workflow-visual-core",
+    "typecheck": "npm run typecheck --workspace=packages/workflow-visual-core",
+    "dev": "npm run dev --workspace=playground",
+    "build:all": "npm run build && npm run build --workspace=playground"
+  }
+}
