@@ -1,0 +1,133 @@
+{
+  "graphId": "wde-initial-workflow-package-001",
+  "title": "WDE Initial Workflow Package",
+  "description": "Illustrative workflow for a WDE insurance package — covers intake, underwriting decision, cross-department handoff, compliance interface, and unresolved edge cases. Generated from Pass 6C approved workflow data.",
+  "version": "1.0.0",
+  "graphType": "workflow",
+  "direction": "TD",
+  "nodes": [
+    {
+      "id": "start",
+      "label": "Client Submits Application",
+      "nodeType": "start",
+      "lane": "Client"
+    },
+    {
+      "id": "intake_review",
+      "label": "Intake Review",
+      "nodeType": "step",
+      "status": "confirmed",
+      "lane": "Operations",
+      "description": "Agent verifies completeness of submitted documents"
+    },
+    {
+      "id": "eligibility_check",
+      "label": "Eligibility Check",
+      "nodeType": "decision",
+      "status": "confirmed",
+      "lane": "Operations",
+      "description": "Does the applicant meet basic package eligibility criteria?"
+    },
+    {
+      "id": "underwriting",
+      "label": "Underwriting Assessment",
+      "nodeType": "step",
+      "status": "confirmed",
+      "lane": "Underwriting",
+      "description": "Risk scoring and premium calculation"
+    },
+    {
+      "id": "compliance_interface",
+      "label": "Compliance System Interface",
+      "nodeType": "interface",
+      "status": "external_unvalidated",
+      "lane": "Compliance",
+      "description": "AML / KYC check via external compliance platform — integration not yet confirmed"
+    },
+    {
+      "id": "underwriting_decision",
+      "label": "Underwriting Decision",
+      "nodeType": "decision",
+      "status": "confirmed",
+      "lane": "Underwriting"
+    },
+    {
+      "id": "approval_gate",
+      "label": "Senior Underwriter Approval",
+      "nodeType": "approval",
+      "status": "confirmed",
+      "lane": "Underwriting",
+      "description": "Required for high-risk or high-value packages"
+    },
+    {
+      "id": "handoff_to_ops",
+      "label": "Hand off to Policy Ops",
+      "nodeType": "handoff",
+      "status": "confirmed",
+      "lane": "Underwriting",
+      "description": "Underwriting transfers approved file to Policy Operations"
+    },
+    {
+      "id": "policy_issuance",
+      "label": "Issue Policy Document",
+      "nodeType": "step",
+      "status": "confirmed",
+      "lane": "Operations"
+    },
+    {
+      "id": "rejection_notice",
+      "label": "Send Rejection Notice",
+      "nodeType": "step",
+      "status": "confirmed",
+      "lane": "Operations"
+    },
+    {
+      "id": "edge_case_warning",
+      "label": "Non-Standard Risk Flag",
+      "nodeType": "warning",
+      "status": "warning",
+      "lane": "Underwriting",
+      "description": "Applicant profile triggers non-standard risk criteria — manual review required",
+      "markers": ["manual-review", "legal-hold"]
+    },
+    {
+      "id": "resubmit_path",
+      "label": "Resubmission Path",
+      "nodeType": "unresolved",
+      "status": "unresolved",
+      "lane": "Operations",
+      "description": "Process for incomplete or conditionally eligible applications is not yet defined"
+    },
+    {
+      "id": "end_approved",
+      "label": "Package Active",
+      "nodeType": "end",
+      "lane": "Client"
+    },
+    {
+      "id": "end_rejected",
+      "label": "Application Closed",
+      "nodeType": "end",
+      "lane": "Client"
+    }
+  ],
+  "edges": [
+    { "id": "e1", "from": "start", "to": "intake_review", "edgeType": "sequence" },
+    { "id": "e2", "from": "intake_review", "to": "eligibility_check", "edgeType": "sequence" },
+    { "id": "e3", "from": "eligibility_check", "to": "underwriting", "edgeType": "conditional", "condition": "Eligible" },
+    { "id": "e4", "from": "eligibility_check", "to": "resubmit_path", "edgeType": "conditional", "condition": "Incomplete" },
+    { "id": "e5", "from": "eligibility_check", "to": "rejection_notice", "edgeType": "conditional", "condition": "Ineligible" },
+    { "id": "e6", "from": "underwriting", "to": "compliance_interface", "edgeType": "dependency" },
+    { "id": "e7", "from": "compliance_interface", "to": "underwriting_decision", "edgeType": "sequence" },
+    { "id": "e8", "from": "underwriting", "to": "edge_case_warning", "edgeType": "exception", "condition": "Non-standard profile" },
+    { "id": "e9", "from": "edge_case_warning", "to": "approval_gate", "edgeType": "sequence" },
+    { "id": "e10", "from": "underwriting_decision", "to": "approval_gate", "edgeType": "conditional", "condition": "High-risk / high-value" },
+    { "id": "e11", "from": "underwriting_decision", "to": "handoff_to_ops", "edgeType": "conditional", "condition": "Approved — standard" },
+    { "id": "e12", "from": "underwriting_decision", "to": "rejection_notice", "edgeType": "conditional", "condition": "Declined" },
+    { "id": "e13", "from": "approval_gate", "to": "handoff_to_ops", "edgeType": "approval", "condition": "Approved" },
+    { "id": "e14", "from": "approval_gate", "to": "rejection_notice", "edgeType": "approval", "condition": "Rejected" },
+    { "id": "e15", "from": "handoff_to_ops", "to": "policy_issuance", "edgeType": "handoff" },
+    { "id": "e16", "from": "policy_issuance", "to": "end_approved", "edgeType": "sequence" },
+    { "id": "e17", "from": "rejection_notice", "to": "end_rejected", "edgeType": "sequence" }
+  ]
+}

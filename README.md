@@ -49,15 +49,22 @@ Or use the included `vercel.json` — it configures everything automatically.
 
 ---
 
-## Using as a Library
+## Install in another project
 
 ```bash
-# In your project, link locally:
+# Option A — local path install (primary, no publishing needed):
+# Run this from inside your project (e.g. WDE):
 npm install ../path/to/workflow-visual-core/packages/workflow-visual-core
 
-# Or after publishing to npm:
+# After any library change, rebuild and re-install:
+cd ../path/to/workflow-visual-core && npm run build
+cd - && npm install ../path/to/workflow-visual-core/packages/workflow-visual-core
+
+# Option B — after publishing to npm:
 npm install workflow-visual-core
 ```
+
+## Using as a Library
 
 ```typescript
 import {
