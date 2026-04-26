@@ -79,8 +79,9 @@ function getScratch(): HTMLDivElement {
 
 let mermaidCounter = 0;
 async function renderMermaid(text: string): Promise<string> {
-  // Yield to the browser so the UI stays responsive before heavy Mermaid work
-  await new Promise((r) => setTimeout(r, 0));
+  // Double RAF + setTimeout: gives the browser 2 paint opportunities so
+  // any loading-spinner state actually renders before the blocking work begins
+  await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(r, 0))));
   const id = `mr-${++mermaidCounter}`;
   const scratch = getScratch();
   scratch.innerHTML = "";
@@ -117,6 +118,7 @@ export default function App() {
   const [selectedExample, setSelectedExample] = useState<string>(DEFAULT_EXAMPLE);
   const [copied, setCopied] = useState(false);
   const [graphTitle, setGraphTitle] = useState<string>("workflow");
+  const [isRendering, setIsRendering] = useState(false);
 
   // AI mode
   const [inputMode, setInputMode] = useState<InputMode>("paste");
@@ -151,12 +153,15 @@ export default function App() {
       const text = toMermaid(result.data, { skipValidation: true, includeTitle: true });
       if (gen !== renderGenRef.current) return;
       setMermaidText(text);
+      setIsRendering(true);
       const svg = await renderMermaid(text);
       if (gen !== renderGenRef.current) return;
       setMermaidSvg(svg);
     } catch (err) {
       if (gen !== renderGenRef.current) return;
       setMermaidSvg(`<pre style="color:#ef4444;padding:16px;font-size:11px;white-space:pre-wrap;">Render error:\n${String(err)}</pre>`);
+    } finally {
+      if (gen === renderGenRef.current) setIsRendering(false);
     }
 
     try {
@@ -224,8 +229,8 @@ export default function App() {
       let raw = data.choices[0]?.message?.content?.trim() ?? "";
       // Strip markdown code fences if present
       raw = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
-      setJsonInput(raw);
       setInputMode("paste");
+      setJsonInput(raw);
     } catch (err) {
       setAiError(String(err instanceof Error ? err.message : err));
     } finally {
@@ -503,8 +508,15 @@ export default function App() {
           <div style={{ flex: 1, overflow: "hidden", position: "relative" }}>
             {activeTab === "mermaid" && (
               <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-                <div className="mermaid-output" style={{ flex: 1, overflow: "auto", padding: "24px", display: "flex", alignItems: "flex-start", justifyContent: "center", background: "var(--surface2)" }}
-                  dangerouslySetInnerHTML={{ __html: mermaidSvg || '<div style="color:#4a4a58;font-size:13px;margin-top:60px;">Paste a valid WorkflowGraph JSON →</div>' }} />
+                <div className="mermaid-output" style={{ flex: 1, overflow: "auto", padding: "24px", display: "flex", alignItems: "flex-start", justifyContent: "center", background: "var(--surface2)", position: "relative" }}>
+                  {isRendering && (
+                    <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(20,20,22,0.75)", zIndex: 10, flexDirection: "column", gap: "12px" }}>
+                      <div style={{ width: "32px", height: "32px", border: "3px solid var(--border)", borderTopColor: "var(--accent)", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
+                      <span style={{ color: "var(--text-muted)", fontSize: "12px" }}>Rendering diagram…</span>
+                    </div>
+                  )}
+                  <div dangerouslySetInnerHTML={{ __html: mermaidSvg || '<div style="color:#4a4a58;font-size:13px;margin-top:60px;">Paste a valid WorkflowGraph JSON →</div>' }} />
+                </div>
                 <div style={{ borderTop: "1px solid var(--border)", padding: "12px 16px", background: "var(--surface)", maxHeight: "160px", overflow: "auto", flexShrink: 0 }}>
                   <div style={{ fontSize: "10px", color: "var(--text-dim)", marginBottom: "6px", letterSpacing: "0.08em", textTransform: "uppercase" }}>Raw Mermaid Text</div>
                   <pre style={{ fontSize: "11px", color: "var(--text-muted)", lineHeight: 1.6, margin: 0 }}>{mermaidText}</pre>

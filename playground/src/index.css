@@ -73,6 +73,10 @@ textarea {
   height: auto;
 }
 
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 /* Force dark text on React Flow nodes (they have light bg colors) */
 .react-flow__node {
   color: #111827;
