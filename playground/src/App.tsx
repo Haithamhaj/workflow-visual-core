@@ -37,6 +37,33 @@ mermaid.initialize({
 
 type TabType = "mermaid" | "reactflow" | "json-out";
 type ValidationState = { ok: true } | { ok: false; errors: ValidationError[] } | null;
+type InputMode = "paste" | "ai";
+
+type SavedDiagram = {
+  id: string;
+  title: string;
+  json: string;
+  savedAt: string;
+};
+
+const STORAGE_KEY = "workflow_saved_diagrams";
+const MAX_SAVED = 20;
+
+const AI_SYSTEM_PROMPT = `You are a WorkflowGraph JSON generator. Always respond with ONLY valid JSON matching this schema exactly — no markdown, no explanation, just raw JSON:
+{
+  graphId: string (unique),
+  title: string,
+  description: string,
+  version: "1.0.0",
+  graphType: "workflow" | "decision_tree" | "architecture" | "roadmap" | "dependency_map" | "generic",
+  direction: "TD" | "LR",
+  nodes: Array<{ id, label, nodeType, status?, description?, lane?, markers? }>,
+  edges: Array<{ id, from, to, edgeType?, label?, condition?, status? }>
+}
+nodeType options: start, end, step, decision, handoff, approval, control, system, document, interface, external, warning, unresolved, note, group, custom
+edgeType options: sequence, conditional, handoff, approval, dependency, reference, exception, feedback, custom
+status options: confirmed, assumed, warning, unresolved, external_unvalidated, out_of_scope
+Use meaningful IDs (no spaces). Make the diagram detailed and accurate based on the user's description.`;
 
 const DEFAULT_EXAMPLE = Object.keys(EXAMPLES)[0]!;
 
@@ -59,6 +86,23 @@ async function renderMermaid(text: string): Promise<string> {
   return svg;
 }
 
+function loadSaved(): SavedDiagram[] {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]");
+  } catch {
+    return [];
+  }
+}
+
+function persistSaved(items: SavedDiagram[]) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+}
+
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
 export default function App() {
   const [jsonInput, setJsonInput] = useState<string>(EXAMPLES[DEFAULT_EXAMPLE]!);
   const [activeTab, setActiveTab] = useState<TabType>("mermaid");
@@ -70,6 +114,17 @@ export default function App() {
   const [jsonOutput, setJsonOutput] = useState<string>("");
   const [selectedExample, setSelectedExample] = useState<string>(DEFAULT_EXAMPLE);
   const [copied, setCopied] = useState(false);
+  const [graphTitle, setGraphTitle] = useState<string>("workflow");
+
+  // AI mode
+  const [inputMode, setInputMode] = useState<InputMode>("paste");
+  const [aiPrompt, setAiPrompt] = useState<string>("");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [aiError, setAiError] = useState<string>("");
+
+  // Save / load
+  const [savedDiagrams, setSavedDiagrams] = useState<SavedDiagram[]>(loadSaved);
+  const [showSaved, setShowSaved] = useState(false);
 
   const processGraph = useCallback(async (input: string) => {
     let parsed: unknown;
@@ -82,6 +137,8 @@ export default function App() {
     const result = validateWorkflowGraph(parsed);
     setValidation(result.ok ? { ok: true } : { ok: false, errors: result.errors });
     if (!result.ok) return;
+
+    setGraphTitle(result.data.title ?? "workflow");
 
     try {
       const text = toMermaid(result.data, { skipValidation: true, includeTitle: true });
@@ -118,8 +175,120 @@ export default function App() {
     });
   };
 
+  // ── AI Generator ─────────────────────────────────────────
+
+  const handleGenerate = async () => {
+    if (!aiPrompt.trim()) return;
+    const apiKey = import.meta.env.VITE_OPENAI_API_KEY as string | undefined;
+    if (!apiKey) {
+      setAiError("Missing VITE_OPENAI_API_KEY in .env");
+      return;
+    }
+    setIsGenerating(true);
+    setAiError("");
+    try {
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify({
+          model: "gpt-4o",
+          messages: [
+            { role: "system", content: AI_SYSTEM_PROMPT },
+            { role: "user", content: aiPrompt },
+          ],
+          temperature: 0.4,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error((body as { error?: { message?: string } }).error?.message ?? `HTTP ${res.status}`);
+      }
+      const data = await res.json() as { choices: { message: { content: string } }[] };
+      let raw = data.choices[0]?.message?.content?.trim() ?? "";
+      // Strip markdown code fences if present
+      raw = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+      setJsonInput(raw);
+      setInputMode("paste");
+    } catch (err) {
+      setAiError(String(err instanceof Error ? err.message : err));
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // ── Save / Load ──────────────────────────────────────────
+
+  const handleSave = () => {
+    const title = graphTitle || "Untitled";
+    const newItem: SavedDiagram = {
+      id: `${Date.now()}`,
+      title,
+      json: jsonInput,
+      savedAt: new Date().toISOString(),
+    };
+    const updated = [newItem, ...savedDiagrams].slice(0, MAX_SAVED);
+    setSavedDiagrams(updated);
+    persistSaved(updated);
+  };
+
+  const handleLoadSaved = (item: SavedDiagram) => {
+    setJsonInput(item.json);
+    setShowSaved(false);
+  };
+
+  const handleDeleteSaved = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const updated = savedDiagrams.filter((d) => d.id !== id);
+    setSavedDiagrams(updated);
+    persistSaved(updated);
+  };
+
+  // ── Export PNG ───────────────────────────────────────────
+
+  const handleExportPng = () => {
+    const svgEl = document.querySelector<SVGSVGElement>(".mermaid-output svg");
+    if (!svgEl) return;
+
+    const bbox = svgEl.getBoundingClientRect();
+    const width = Math.max(bbox.width, 800);
+    const height = Math.max(bbox.height, 400);
+
+    const clone = svgEl.cloneNode(true) as SVGSVGElement;
+    clone.setAttribute("width", String(width));
+    clone.setAttribute("height", String(height));
+
+    const svgData = new XMLSerializer().serializeToString(clone);
+    const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(svgBlob);
+
+    const img = new Image();
+    img.onload = () => {
+      const scale = 2;
+      const canvas = document.createElement("canvas");
+      canvas.width = width * scale;
+      canvas.height = height * scale;
+      const ctx = canvas.getContext("2d")!;
+      ctx.scale(scale, scale);
+      ctx.fillStyle = "#1c1c20";
+      ctx.fillRect(0, 0, width, height);
+      ctx.drawImage(img, 0, 0, width, height);
+      URL.revokeObjectURL(url);
+
+      const date = new Date().toISOString().slice(0, 10);
+      const safe = graphTitle.replace(/[^a-z0-9_-]/gi, "-").toLowerCase();
+      const a = document.createElement("a");
+      a.download = `${safe}-${date}.png`;
+      a.href = canvas.toDataURL("image/png");
+      a.click();
+    };
+    img.src = url;
+  };
+
+  // ── Render ───────────────────────────────────────────────
+
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100vh", background: "var(--bg)" }}>
+      {/* Header */}
       <header style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
         padding: "0 20px", height: "52px", borderBottom: "1px solid var(--border)",
@@ -145,6 +314,64 @@ export default function App() {
             }}>
             {Object.keys(EXAMPLES).map((name) => <option key={name} value={name}>{name}</option>)}
           </select>
+
+          {/* Save button */}
+          <button onClick={handleSave} style={{
+            padding: "5px 12px", borderRadius: "var(--radius-sm)",
+            background: "var(--surface2)", border: "1px solid var(--border)",
+            color: "var(--text-muted)", fontSize: "12px", fontWeight: 500,
+          }}>💾 Save</button>
+
+          {/* Saved dropdown */}
+          <div style={{ position: "relative" }}>
+            <button onClick={() => setShowSaved((v) => !v)} style={{
+              padding: "5px 12px", borderRadius: "var(--radius-sm)",
+              background: showSaved ? "var(--accent-dim)" : "var(--surface2)",
+              border: `1px solid ${showSaved ? "#3d2a6e" : "var(--border)"}`,
+              color: showSaved ? "#a78bfa" : "var(--text-muted)", fontSize: "12px", fontWeight: 500,
+            }}>
+              📂 Saved {savedDiagrams.length > 0 && `(${savedDiagrams.length})`}
+            </button>
+
+            {showSaved && (
+              <div style={{
+                position: "absolute", top: "calc(100% + 6px)", right: 0, zIndex: 100,
+                background: "var(--surface)", border: "1px solid var(--border)",
+                borderRadius: "var(--radius)", minWidth: "280px", maxHeight: "340px",
+                overflowY: "auto", boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
+              }}>
+                {savedDiagrams.length === 0 ? (
+                  <div style={{ padding: "16px", color: "var(--text-dim)", fontSize: "12px", textAlign: "center" }}>
+                    No saved diagrams yet
+                  </div>
+                ) : (
+                  savedDiagrams.map((item) => (
+                    <div key={item.id} onClick={() => handleLoadSaved(item)}
+                      style={{
+                        padding: "10px 14px", cursor: "pointer", borderBottom: "1px solid var(--border)",
+                        display: "flex", alignItems: "center", justifyContent: "space-between",
+                        transition: "background 0.1s",
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "var(--surface2)")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                    >
+                      <div>
+                        <div style={{ fontSize: "12px", fontWeight: 500, color: "var(--text)", marginBottom: "2px" }}>
+                          {item.title}
+                        </div>
+                        <div style={{ fontSize: "10px", color: "var(--text-dim)" }}>{formatDate(item.savedAt)}</div>
+                      </div>
+                      <button onClick={(e) => handleDeleteSaved(item.id, e)} style={{
+                        background: "transparent", border: "none", color: "var(--text-dim)",
+                        fontSize: "14px", padding: "2px 6px", borderRadius: "4px", cursor: "pointer",
+                        lineHeight: 1,
+                      }} title="Delete">×</button>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
@@ -152,11 +379,61 @@ export default function App() {
         {/* Left Panel */}
         <div style={{ width: "420px", flexShrink: 0, display: "flex", flexDirection: "column", borderRight: "1px solid var(--border)", background: "var(--surface)" }}>
           <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span style={{ fontSize: "11px", fontWeight: 600, letterSpacing: "0.08em", color: "var(--text-muted)", textTransform: "uppercase" }}>WorkflowGraph JSON</span>
+            <div style={{ display: "flex", gap: "4px" }}>
+              <button onClick={() => setInputMode("paste")} style={{
+                padding: "4px 10px", borderRadius: "var(--radius-sm)", fontSize: "11px", fontWeight: 500,
+                background: inputMode === "paste" ? "var(--accent-dim)" : "transparent",
+                color: inputMode === "paste" ? "#a78bfa" : "var(--text-muted)",
+                border: inputMode === "paste" ? "1px solid #3d2a6e" : "1px solid transparent",
+              }}>✏️ Paste JSON</button>
+              <button onClick={() => setInputMode("ai")} style={{
+                padding: "4px 10px", borderRadius: "var(--radius-sm)", fontSize: "11px", fontWeight: 500,
+                background: inputMode === "ai" ? "var(--accent-dim)" : "transparent",
+                color: inputMode === "ai" ? "#a78bfa" : "var(--text-muted)",
+                border: inputMode === "ai" ? "1px solid #3d2a6e" : "1px solid transparent",
+              }}>✨ Generate with AI</button>
+            </div>
             <ValidationBadge state={validation} />
           </div>
+
+          {/* AI mode input */}
+          {inputMode === "ai" && (
+            <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border)", background: "var(--surface2)" }}>
+              <textarea
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleGenerate(); }}
+                placeholder="Describe your workflow in Arabic or English…&#10;e.g. 'رسم مخطط لعملية الموافقة على القروض'"
+                style={{
+                  width: "100%", background: "var(--surface)", border: "1px solid var(--border)",
+                  color: "var(--text)", fontSize: "12px", lineHeight: 1.6, padding: "10px 12px",
+                  borderRadius: "var(--radius-sm)", resize: "none", height: "80px", outline: "none",
+                  fontFamily: "var(--font-sans)",
+                }}
+              />
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "8px" }}>
+                <button onClick={handleGenerate} disabled={isGenerating || !aiPrompt.trim()} style={{
+                  padding: "6px 16px", borderRadius: "var(--radius-sm)", fontSize: "12px", fontWeight: 600,
+                  background: isGenerating ? "var(--surface2)" : "var(--accent)",
+                  color: isGenerating ? "var(--text-dim)" : "#fff",
+                  border: "none", cursor: isGenerating ? "not-allowed" : "pointer",
+                  transition: "all 0.15s",
+                }}>
+                  {isGenerating ? "⏳ Generating…" : "✨ Generate"}
+                </button>
+                <span style={{ fontSize: "10px", color: "var(--text-dim)" }}>⌘↵ to generate</span>
+              </div>
+              {aiError && (
+                <div style={{ marginTop: "8px", fontSize: "11px", color: "var(--error)", lineHeight: 1.4 }}>
+                  {aiError}
+                </div>
+              )}
+            </div>
+          )}
+
           <textarea value={jsonInput} onChange={(e) => setJsonInput(e.target.value)} spellCheck={false}
             style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: "var(--text)", fontSize: "12px", lineHeight: 1.7, padding: "16px", overflowY: "auto" }} />
+
           {validation && !validation.ok && (
             <div style={{ borderTop: "1px solid var(--border)", padding: "12px 16px", background: "#1a0f0f", maxHeight: "180px", overflowY: "auto" }}>
               <div style={{ fontSize: "11px", fontWeight: 600, color: "var(--error)", marginBottom: "8px", letterSpacing: "0.06em" }}>VALIDATION ERRORS</div>
@@ -186,15 +463,24 @@ export default function App() {
                 </button>
               ))}
             </div>
-            {(activeTab === "mermaid" || activeTab === "json-out") && (
-              <button onClick={handleCopy} style={{
-                padding: "5px 12px", borderRadius: "var(--radius-sm)",
-                background: copied ? "#0d2e1a" : "var(--surface2)",
-                color: copied ? "var(--success)" : "var(--text-muted)",
-                border: `1px solid ${copied ? "#166534" : "var(--border)"}`,
-                fontSize: "11px", fontWeight: 500, transition: "all 0.15s", cursor: "pointer",
-              }}>{copied ? "✓ Copied" : "Copy"}</button>
-            )}
+            <div style={{ display: "flex", gap: "6px" }}>
+              {activeTab === "mermaid" && (
+                <button onClick={handleExportPng} style={{
+                  padding: "5px 12px", borderRadius: "var(--radius-sm)",
+                  background: "var(--surface2)", color: "var(--text-muted)",
+                  border: "1px solid var(--border)", fontSize: "11px", fontWeight: 500,
+                }}>⬇ Export PNG</button>
+              )}
+              {(activeTab === "mermaid" || activeTab === "json-out") && (
+                <button onClick={handleCopy} style={{
+                  padding: "5px 12px", borderRadius: "var(--radius-sm)",
+                  background: copied ? "#0d2e1a" : "var(--surface2)",
+                  color: copied ? "var(--success)" : "var(--text-muted)",
+                  border: `1px solid ${copied ? "#166534" : "var(--border)"}`,
+                  fontSize: "11px", fontWeight: 500, transition: "all 0.15s", cursor: "pointer",
+                }}>{copied ? "✓ Copied" : "Copy"}</button>
+              )}
+            </div>
           </div>
 
           <div style={{ flex: 1, overflow: "hidden", position: "relative" }}>
@@ -226,6 +512,11 @@ export default function App() {
           </div>
         </div>
       </div>
+
+      {/* Close saved dropdown on outside click */}
+      {showSaved && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 99 }} onClick={() => setShowSaved(false)} />
+      )}
     </div>
   );
 }

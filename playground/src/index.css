@@ -72,3 +72,12 @@ textarea {
   max-width: 100%;
   height: auto;
 }
+
+/* Force dark text on React Flow nodes (they have light bg colors) */
+.react-flow__node {
+  color: #111827;
+}
+.react-flow__node .react-flow__handle {
+  background: #6e56cf;
+  border-color: #6e56cf;
+}
