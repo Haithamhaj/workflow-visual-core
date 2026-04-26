@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   ReactFlow,
   Background,
@@ -79,6 +79,8 @@ function getScratch(): HTMLDivElement {
 
 let mermaidCounter = 0;
 async function renderMermaid(text: string): Promise<string> {
+  // Yield to the browser so the UI stays responsive before heavy Mermaid work
+  await new Promise((r) => setTimeout(r, 0));
   const id = `mr-${++mermaidCounter}`;
   const scratch = getScratch();
   scratch.innerHTML = "";
@@ -126,7 +128,11 @@ export default function App() {
   const [savedDiagrams, setSavedDiagrams] = useState<SavedDiagram[]>(loadSaved);
   const [showSaved, setShowSaved] = useState(false);
 
+  const renderGenRef = useRef(0);
+
   const processGraph = useCallback(async (input: string) => {
+    const gen = ++renderGenRef.current;
+
     let parsed: unknown;
     try { parsed = JSON.parse(input); }
     catch {
@@ -135,6 +141,7 @@ export default function App() {
     }
 
     const result = validateWorkflowGraph(parsed);
+    if (gen !== renderGenRef.current) return;
     setValidation(result.ok ? { ok: true } : { ok: false, errors: result.errors });
     if (!result.ok) return;
 
@@ -142,25 +149,35 @@ export default function App() {
 
     try {
       const text = toMermaid(result.data, { skipValidation: true, includeTitle: true });
+      if (gen !== renderGenRef.current) return;
       setMermaidText(text);
       const svg = await renderMermaid(text);
+      if (gen !== renderGenRef.current) return;
       setMermaidSvg(svg);
     } catch (err) {
+      if (gen !== renderGenRef.current) return;
       setMermaidSvg(`<pre style="color:#ef4444;padding:16px;font-size:11px;white-space:pre-wrap;">Render error:\n${String(err)}</pre>`);
     }
 
     try {
       const rf = toReactFlow(result.data, { skipValidation: true });
+      if (gen !== renderGenRef.current) return;
       setRfNodes(rf.nodes as unknown as Node[]);
       setRfEdges(rf.edges as unknown as Edge[]);
-    } catch { setRfNodes([]); setRfEdges([]); }
+    } catch { if (gen === renderGenRef.current) { setRfNodes([]); setRfEdges([]); } }
 
     try {
-      setJsonOutput(JSON.stringify(toReactFlow(result.data, { skipValidation: true }), null, 2));
-    } catch { setJsonOutput("{}"); }
+      const out = JSON.stringify(toReactFlow(result.data, { skipValidation: true }), null, 2);
+      if (gen !== renderGenRef.current) return;
+      setJsonOutput(out);
+    } catch { if (gen === renderGenRef.current) setJsonOutput("{}"); }
   }, [setRfNodes, setRfEdges]);
 
-  useEffect(() => { processGraph(jsonInput); }, [jsonInput, processGraph]);
+  // Debounce: wait 350ms after last keystroke before processing
+  useEffect(() => {
+    const t = setTimeout(() => processGraph(jsonInput), 350);
+    return () => clearTimeout(t);
+  }, [jsonInput, processGraph]);
 
   const handleExampleChange = (name: string) => {
     setSelectedExample(name);
