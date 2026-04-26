@@ -106,12 +106,16 @@ function formatDate(iso: string): string {
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
+// Auto-render Mermaid only for small diagrams (to avoid freezing)
+const AUTO_RENDER_NODE_LIMIT = 8;
+
 export default function App() {
   const [jsonInput, setJsonInput] = useState<string>(EXAMPLES[DEFAULT_EXAMPLE]!);
-  const [activeTab, setActiveTab] = useState<TabType>("mermaid");
+  const [activeTab, setActiveTab] = useState<TabType>("reactflow");
   const [validation, setValidation] = useState<ValidationState>(null);
   const [mermaidSvg, setMermaidSvg] = useState<string>("");
   const [mermaidText, setMermaidText] = useState<string>("");
+  const [mermaidReady, setMermaidReady] = useState(false);
   const [rfNodes, setRfNodes, onNodesChange] = useNodesState<Node>([]);
   const [rfEdges, setRfEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [jsonOutput, setJsonOutput] = useState<string>("");
@@ -119,6 +123,7 @@ export default function App() {
   const [copied, setCopied] = useState(false);
   const [graphTitle, setGraphTitle] = useState<string>("workflow");
   const [isRendering, setIsRendering] = useState(false);
+  const [nodeCount, setNodeCount] = useState(0);
 
   // AI mode
   const [inputMode, setInputMode] = useState<InputMode>("paste");
@@ -132,6 +137,25 @@ export default function App() {
 
   const renderGenRef = useRef(0);
 
+  // Renders Mermaid SVG — call only when user explicitly requests it or diagram is small
+  const triggerMermaidRender = useCallback(async (text: string) => {
+    const gen = ++renderGenRef.current;
+    setIsRendering(true);
+    try {
+      const svg = await renderMermaid(text);
+      if (gen !== renderGenRef.current) return;
+      setMermaidSvg(svg);
+      setMermaidReady(true);
+    } catch (err) {
+      if (gen !== renderGenRef.current) return;
+      setMermaidSvg(`<pre style="color:#ef4444;padding:16px;font-size:11px;white-space:pre-wrap;">Render error:\n${String(err)}</pre>`);
+      setMermaidReady(true);
+    } finally {
+      if (gen === renderGenRef.current) setIsRendering(false);
+    }
+  }, []);
+
+  // Processes JSON → validates + React Flow (fast, no Mermaid)
   const processGraph = useCallback(async (input: string) => {
     const gen = ++renderGenRef.current;
 
@@ -148,21 +172,21 @@ export default function App() {
     if (!result.ok) return;
 
     setGraphTitle(result.data.title ?? "workflow");
+    const count = result.data.nodes?.length ?? 0;
+    setNodeCount(count);
 
+    // Prepare Mermaid text but don't render yet
     try {
       const text = toMermaid(result.data, { skipValidation: true, includeTitle: true });
       if (gen !== renderGenRef.current) return;
       setMermaidText(text);
-      setIsRendering(true);
-      const svg = await renderMermaid(text);
-      if (gen !== renderGenRef.current) return;
-      setMermaidSvg(svg);
-    } catch (err) {
-      if (gen !== renderGenRef.current) return;
-      setMermaidSvg(`<pre style="color:#ef4444;padding:16px;font-size:11px;white-space:pre-wrap;">Render error:\n${String(err)}</pre>`);
-    } finally {
-      if (gen === renderGenRef.current) setIsRendering(false);
-    }
+      setMermaidReady(false);
+      setMermaidSvg("");
+      // Auto-render only for small diagrams
+      if (count <= AUTO_RENDER_NODE_LIMIT) {
+        triggerMermaidRender(text);
+      }
+    } catch { /* skip mermaid text on error */ }
 
     try {
       const rf = toReactFlow(result.data, { skipValidation: true });
@@ -176,7 +200,7 @@ export default function App() {
       if (gen !== renderGenRef.current) return;
       setJsonOutput(out);
     } catch { if (gen === renderGenRef.current) setJsonOutput("{}"); }
-  }, [setRfNodes, setRfEdges]);
+  }, [setRfNodes, setRfEdges, triggerMermaidRender]);
 
   // Debounce: wait 350ms after last keystroke before processing
   useEffect(() => {
@@ -481,7 +505,7 @@ export default function App() {
                   border: activeTab === tab ? "1px solid #3d2a6e" : "1px solid transparent",
                   transition: "all 0.15s", cursor: "pointer",
                 }}>
-                  {tab === "mermaid" ? "Mermaid" : tab === "reactflow" ? "React Flow" : "RF JSON"}
+                  {tab === "mermaid" ? "Mermaid" : tab === "reactflow" ? "⚡ React Flow" : "RF JSON"}
                 </button>
               ))}
             </div>
@@ -508,14 +532,43 @@ export default function App() {
           <div style={{ flex: 1, overflow: "hidden", position: "relative" }}>
             {activeTab === "mermaid" && (
               <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-                <div className="mermaid-output" style={{ flex: 1, overflow: "auto", padding: "24px", display: "flex", alignItems: "flex-start", justifyContent: "center", background: "var(--surface2)", position: "relative" }}>
+                <div className="mermaid-output" style={{ flex: 1, overflow: "auto", padding: "24px", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--surface2)", position: "relative" }}>
                   {isRendering && (
-                    <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(20,20,22,0.75)", zIndex: 10, flexDirection: "column", gap: "12px" }}>
-                      <div style={{ width: "32px", height: "32px", border: "3px solid var(--border)", borderTopColor: "var(--accent)", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
+                    <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(20,20,22,0.85)", zIndex: 10, flexDirection: "column", gap: "12px" }}>
+                      <div style={{ width: "36px", height: "36px", border: "3px solid var(--border)", borderTopColor: "var(--accent)", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
                       <span style={{ color: "var(--text-muted)", fontSize: "12px" }}>Rendering diagram…</span>
                     </div>
                   )}
-                  <div dangerouslySetInnerHTML={{ __html: mermaidSvg || '<div style="color:#4a4a58;font-size:13px;margin-top:60px;">Paste a valid WorkflowGraph JSON →</div>' }} />
+                  {!isRendering && !mermaidReady && mermaidText && (
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "16px", textAlign: "center" }}>
+                      <div style={{ fontSize: "32px" }}>📊</div>
+                      <div style={{ color: "var(--text-muted)", fontSize: "13px", lineHeight: 1.6 }}>
+                        This diagram has <strong style={{ color: "var(--text)" }}>{nodeCount} nodes</strong>.<br />
+                        Mermaid rendering may take a few seconds.
+                      </div>
+                      <button
+                        onClick={() => triggerMermaidRender(mermaidText)}
+                        style={{
+                          padding: "10px 24px", borderRadius: "var(--radius)", fontSize: "13px", fontWeight: 600,
+                          background: "var(--accent)", color: "#fff", border: "none", cursor: "pointer",
+                          transition: "background 0.15s",
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = "var(--accent-hover)")}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = "var(--accent)")}
+                      >
+                        ▶ Render Mermaid Diagram
+                      </button>
+                      <span style={{ color: "var(--text-dim)", fontSize: "11px" }}>
+                        Tip: React Flow tab is always instant ⚡
+                      </span>
+                    </div>
+                  )}
+                  {!isRendering && mermaidReady && (
+                    <div style={{ alignSelf: "flex-start" }} dangerouslySetInnerHTML={{ __html: mermaidSvg }} />
+                  )}
+                  {!isRendering && !mermaidReady && !mermaidText && (
+                    <div style={{ color: "#4a4a58", fontSize: "13px" }}>Paste a valid WorkflowGraph JSON →</div>
+                  )}
                 </div>
                 <div style={{ borderTop: "1px solid var(--border)", padding: "12px 16px", background: "var(--surface)", maxHeight: "160px", overflow: "auto", flexShrink: 0 }}>
                   <div style={{ fontSize: "10px", color: "var(--text-dim)", marginBottom: "6px", letterSpacing: "0.08em", textTransform: "uppercase" }}>Raw Mermaid Text</div>
