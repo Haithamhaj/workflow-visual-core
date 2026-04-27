@@ -80,10 +80,14 @@ describe("toReactFlow", () => {
     expect(edge?.data.originalEdge.condition).toBe("No");
   });
 
-  it("applies warning style to warning status nodes", () => {
+  it("applies warning colors to warning status nodes via data.colors", () => {
     const output = toReactFlow(testGraph);
     const warningNode = output.nodes.find((n) => n.id === "step2");
-    expect(warningNode?.style?.background).toContain("#fff3cd");
+    // Colors are delivered through data.colors (consumed by the custom WorkflowNode renderer),
+    // not node.style — the style object is intentionally left empty for custom node types.
+    expect(warningNode?.data.colors).toBeDefined();
+    expect(warningNode?.data.colors.border).toBe("#ffc107");
+    expect(warningNode?.data.colors.bg).toBe("#4a3800");
   });
 
   it("throws on invalid graph", () => {
