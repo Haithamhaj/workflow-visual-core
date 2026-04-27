@@ -137,23 +137,24 @@ export default function App() {
   const [showSaved, setShowSaved] = useState(false);
 
   const renderGenRef = useRef(0);
+  const mermaidGenRef = useRef(0);
   const rfInstanceRef = useRef<ReactFlowInstance | null>(null);
 
   // Renders Mermaid SVG — call only when user explicitly requests it or diagram is small
   const triggerMermaidRender = useCallback(async (text: string) => {
-    const gen = ++renderGenRef.current;
+    const gen = ++mermaidGenRef.current;
     setIsRendering(true);
     try {
       const svg = await renderMermaid(text);
-      if (gen !== renderGenRef.current) return;
+      if (gen !== mermaidGenRef.current) return;
       setMermaidSvg(svg);
       setMermaidReady(true);
     } catch (err) {
-      if (gen !== renderGenRef.current) return;
+      if (gen !== mermaidGenRef.current) return;
       setMermaidSvg(`<pre style="color:#ef4444;padding:16px;font-size:11px;white-space:pre-wrap;">Render error:\n${String(err)}</pre>`);
       setMermaidReady(true);
     } finally {
-      if (gen === renderGenRef.current) setIsRendering(false);
+      if (gen === mermaidGenRef.current) setIsRendering(false);
     }
   }, []);
 
