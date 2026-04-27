@@ -18,46 +18,50 @@ function mapNodeType(_nodeType: NodeType): string {
 // ── Node style hints by type ──────────────────────────────
 
 function nodeStyle(nodeType: NodeType, status?: string): Record<string, string | number> {
-  const base: Record<string, string | number> = {
-    padding: "8px 16px",
-    borderRadius: "6px",
-    fontSize: "13px",
-    fontWeight: "500",
-  };
+  // Use React Flow CSS variables so styles apply to the inner node element,
+  // not just the outer wrapper (which colorMode="dark" would override otherwise).
+  const vars = (bg: string, border: string, color: string, radius = "6px"): Record<string, string> => ({
+    "--xy-node-background-color": bg,
+    "--xy-node-border-color": border,
+    "--xy-node-color": color,
+    "--xy-node-border-radius": radius,
+  });
 
-  // Status overrides
   if (status === "warning" || nodeType === "warning") {
-    return { ...base, background: "#3d2e00", border: "2px solid #ffc107", color: "#ffc107" };
+    return vars("#3d2e00", "#ffc107", "#ffc107");
   }
   if (status === "unresolved" || nodeType === "unresolved") {
-    return { ...base, background: "#3d0e0e", border: "2px solid #dc3545", color: "#ff8a8a" };
+    return vars("#3d0e0e", "#dc3545", "#ff8a8a");
   }
   if (status === "assumed") {
-    return { ...base, background: "#0c2a30", border: "2px dashed #17a2b8", color: "#63d9ef" };
+    return vars("#0c2a30", "#17a2b8", "#63d9ef");
   }
   if (nodeType === "start") {
-    return { ...base, background: "#0d2e1a", border: "2px solid #28a745", borderRadius: "24px", color: "#4cde8a" };
+    return vars("#0d2e1a", "#28a745", "#4cde8a", "24px");
   }
   if (nodeType === "end") {
-    return { ...base, background: "#0a1e3d", border: "2px solid #3b82f6", borderRadius: "24px", color: "#7cb8ff" };
+    return vars("#0a1e3d", "#3b82f6", "#7cb8ff", "24px");
   }
   if (nodeType === "decision") {
-    return { ...base, background: "#2e2500", border: "2px solid #f9a825", color: "#ffd54f" };
+    return vars("#2e2500", "#f9a825", "#ffd54f");
   }
   if (nodeType === "handoff") {
-    return { ...base, background: "#1a1c3a", border: "2px solid #5c6bc0", color: "#9fa8da" };
+    return vars("#1a1c3a", "#5c6bc0", "#9fa8da");
+  }
+  if (nodeType === "approval") {
+    return vars("#1a2a1a", "#28a745", "#6fcf97");
   }
   if (nodeType === "external" || nodeType === "interface") {
-    return { ...base, background: "#1e1e22", border: "2px dashed #6c757d", color: "#adb5bd" };
+    return vars("#1e1e22", "#6c757d", "#adb5bd");
   }
   if (nodeType === "system") {
-    return { ...base, background: "#0a1929", border: "2px solid #1976d2", color: "#64b5f6" };
+    return vars("#0a1929", "#1976d2", "#64b5f6");
   }
   if (nodeType === "note") {
-    return { ...base, background: "#1e1a00", border: "1px solid #f9a825", fontStyle: "italic", color: "#ffd54f" };
+    return vars("#1e1a00", "#f9a825", "#ffd54f");
   }
 
-  return { ...base, background: "#2a2a35", border: "1px solid #4a4a58", color: "#e8e8f0" };
+  return vars("#2a2a35", "#4a4a58", "#e8e8f0");
 }
 
 // ── Simple layered layout ─────────────────────────────────
