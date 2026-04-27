@@ -23,19 +23,20 @@ export function nodeColors(nodeType: NodeType, status?: string): NodeColors {
   const c = (bg: string, border: string, color: string, radius = "6px"): NodeColors => ({ bg, border, color, radius });
 
   // All backgrounds must be clearly above the canvas (#1c1c20) so nodes are visible
-  if (status === "warning" || nodeType === "warning")         return c("#3d2e00", "#ffc107", "#ffc107");
-  if (status === "unresolved" || nodeType === "unresolved")   return c("#3d0e0e", "#dc3545", "#ff8a8a");
-  if (status === "assumed")                                   return c("#113540", "#17a2b8", "#63d9ef");
-  if (nodeType === "start")                                   return c("#0d3320", "#28a745", "#4cde8a", "24px");
-  if (nodeType === "end")                                     return c("#0e2a50", "#3b82f6", "#7cb8ff", "24px");
-  if (nodeType === "decision")                                return c("#332900", "#f9a825", "#ffd54f");
-  if (nodeType === "handoff")                                 return c("#252850", "#5c6bc0", "#9fa8da");
-  if (nodeType === "approval")                                return c("#1c3520", "#28a745", "#6fcf97");
-  if (nodeType === "external" || nodeType === "interface")    return c("#2e2e38", "#6c757d", "#c0c4cc");
-  if (nodeType === "system")                                  return c("#102e48", "#1976d2", "#64b5f6");
-  if (nodeType === "note")                                    return c("#2d2600", "#f9a825", "#ffd54f");
+  if (status === "warning" || nodeType === "warning")         return c("#4a3800", "#ffc107", "#ffd54f");
+  if (status === "unresolved" || nodeType === "unresolved")   return c("#4a1010", "#ef4444", "#fca5a5");
+  if (status === "assumed")                                   return c("#0f3d4a", "#22d3ee", "#7ae8ff");
+  if (nodeType === "start")                                   return c("#0a3d1f", "#22c55e", "#4ade80", "24px");
+  if (nodeType === "end")                                     return c("#0c2d5c", "#3b82f6", "#93c5fd", "24px");
+  if (nodeType === "decision")                                return c("#3d3000", "#f59e0b", "#fcd34d");
+  if (nodeType === "step")                                    return c("#2a2d3e", "#6366f1", "#a5b4fc");
+  if (nodeType === "handoff")                                 return c("#28285a", "#818cf8", "#c7d2fe");
+  if (nodeType === "approval")                                return c("#163d20", "#22c55e", "#86efac");
+  if (nodeType === "external" || nodeType === "interface")    return c("#35353f", "#94a3b8", "#cbd5e1");
+  if (nodeType === "system")                                  return c("#0f3352", "#38bdf8", "#7dd3fc");
+  if (nodeType === "note")                                    return c("#3a3000", "#f59e0b", "#fcd34d");
 
-  return c("#2e2e3a", "#5a5a70", "#e8e8f0");
+  return c("#363640", "#6b7280", "#e5e7eb");
 }
 
 // ── Simple layered layout ─────────────────────────────────
