@@ -53,21 +53,107 @@ type SavedDiagram = {
 const STORAGE_KEY = "workflow_saved_diagrams";
 const MAX_SAVED = 20;
 
-const AI_SYSTEM_PROMPT = `You are a WorkflowGraph JSON generator. Always respond with ONLY valid JSON matching this schema exactly — no markdown, no explanation, just raw JSON:
+const COLOR_PALETTE = `Color themes (canvas bg = #1c1c20 — must be clearly brighter):
+  start:      { "bg": "#0d4a25", "border": "#22c55e", "color": "#4ade80" }
+  end:        { "bg": "#0f3566", "border": "#3b82f6", "color": "#93c5fd" }
+  step:       { "bg": "#2a2d3e", "border": "#6366f1", "color": "#a5b4fc" }
+  decision:   { "bg": "#3d3000", "border": "#f59e0b", "color": "#fcd34d" }
+  handoff:    { "bg": "#28285a", "border": "#818cf8", "color": "#c7d2fe" }
+  approval:   { "bg": "#163d20", "border": "#22c55e", "color": "#86efac" }
+  system:     { "bg": "#0f3352", "border": "#38bdf8", "color": "#7dd3fc" }
+  external:   { "bg": "#2a2a40", "border": "#94a3b8", "color": "#cbd5e1" }
+  warning:    { "bg": "#4a3800", "border": "#ffc107", "color": "#ffd54f" }
+  unresolved: { "bg": "#4a1010", "border": "#ef4444", "color": "#fca5a5" }
+  note:       { "bg": "#3a3000", "border": "#f59e0b", "color": "#fcd34d" }`;
+
+const AI_SYSTEM_PROMPT = `You are a WorkflowGraph JSON generator. Always respond with ONLY valid JSON — no markdown fences, no explanation, just raw JSON.
+
+Schema:
 {
-  graphId: string (unique),
-  title: string,
-  description: string,
-  version: "1.0.0",
-  graphType: "workflow" | "decision_tree" | "architecture" | "roadmap" | "dependency_map" | "generic",
-  direction: "TD" | "LR",
-  nodes: Array<{ id, label, nodeType, status?, description?, lane?, markers? }>,
-  edges: Array<{ id, from, to, edgeType?, label?, condition?, status? }>
+  "graphId": "unique-id",
+  "title": "string",
+  "description": "string",
+  "version": "1.0.0",
+  "graphType": "workflow | decision_tree | architecture | roadmap | dependency_map | generic",
+  "direction": "TD | LR",
+  "nodes": [
+    {
+      "id": "no_spaces",
+      "label": "Display Label",
+      "nodeType": "start | end | step | decision | handoff | approval | control | system | document | interface | external | warning | unresolved | note | custom",
+      "status": "confirmed | assumed | warning | unresolved | external_unvalidated | out_of_scope",
+      "description": "optional",
+      "lane": "optional swimlane name",
+      "colors": { "bg": "...", "border": "...", "color": "..." }
+    }
+  ],
+  "edges": [
+    {
+      "id": "unique-id",
+      "from": "source_node_id",
+      "to": "target_node_id",
+      "label": "optional",
+      "edgeType": "sequence | conditional | handoff | approval | dependency | reference | exception | feedback | custom",
+      "condition": "optional",
+      "status": "confirmed | assumed | warning | unresolved"
+    }
+  ]
 }
-nodeType options: start, end, step, decision, handoff, approval, control, system, document, interface, external, warning, unresolved, note, group, custom
+
+IMPORTANT: Always include "colors" on every node. The canvas background is #1c1c20 (very dark) — colors must be clearly brighter.
+${COLOR_PALETTE}
+
+Use meaningful IDs (no spaces). Make the diagram detailed and accurate.`;
+
+const PROMPT_TEMPLATE = `You are a WorkflowGraph JSON generator. Respond with ONLY raw JSON — no markdown fences, no explanation.
+
+Required schema:
+{
+  "graphId": "unique-id",
+  "title": "Diagram Title",
+  "description": "Optional description",
+  "version": "1.0.0",
+  "graphType": "workflow",
+  "direction": "TD",
+  "nodes": [ ... ],
+  "edges": [ ... ]
+}
+
+Node structure:
+{
+  "id": "unique_id_no_spaces",
+  "label": "Display Label",
+  "nodeType": "step",
+  "status": "confirmed",
+  "description": "optional",
+  "lane": "optional swimlane",
+  "colors": {
+    "bg": "#2a2d3e",
+    "border": "#6366f1",
+    "color": "#a5b4fc"
+  }
+}
+
+Edge structure:
+{
+  "id": "edge_id",
+  "from": "source_node_id",
+  "to": "target_node_id",
+  "label": "optional",
+  "edgeType": "sequence",
+  "condition": "optional condition",
+  "status": "confirmed"
+}
+
+nodeType options: start, end, step, decision, handoff, approval, control, system, document, interface, external, warning, unresolved, note, custom
 edgeType options: sequence, conditional, handoff, approval, dependency, reference, exception, feedback, custom
-status options: confirmed, assumed, warning, unresolved, external_unvalidated, out_of_scope
-Use meaningful IDs (no spaces). Make the diagram detailed and accurate based on the user's description.`;
+status (node): confirmed, assumed, warning, unresolved, external_unvalidated, out_of_scope
+status (edge): confirmed, assumed, warning, unresolved
+
+CRITICAL — include "colors" on EVERY node. Canvas background is #1c1c20 (very dark). Use clearly brighter colors:
+${COLOR_PALETTE}
+
+Make the diagram detailed and accurate based on the user's description.`;
 
 const DEFAULT_EXAMPLE = Object.keys(EXAMPLES)[0]!;
 
@@ -165,6 +251,8 @@ export default function App() {
   // Save / load
   const [savedDiagrams, setSavedDiagrams] = useState<SavedDiagram[]>(loadSaved);
   const [showSaved, setShowSaved] = useState(false);
+  const [showPromptGuide, setShowPromptGuide] = useState(false);
+  const [promptCopied, setPromptCopied] = useState(false);
 
   const renderGenRef = useRef(0);
   const mermaidGenRef = useRef(0);
@@ -259,6 +347,13 @@ export default function App() {
     navigator.clipboard.writeText(content).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  const handleCopyPrompt = () => {
+    navigator.clipboard.writeText(PROMPT_TEMPLATE).then(() => {
+      setPromptCopied(true);
+      setTimeout(() => setPromptCopied(false), 2000);
     });
   };
 
@@ -401,6 +496,13 @@ export default function App() {
             }}>
             {Object.keys(EXAMPLES).map((name) => <option key={name} value={name}>{name}</option>)}
           </select>
+
+          {/* AI Guide button */}
+          <button onClick={() => setShowPromptGuide(true)} style={{
+            padding: "5px 12px", borderRadius: "var(--radius-sm)",
+            background: "var(--accent-dim)", border: "1px solid #3d2a6e",
+            color: "#a78bfa", fontSize: "12px", fontWeight: 500,
+          }}>🤖 AI Guide</button>
 
           {/* Save button */}
           <button onClick={handleSave} style={{
@@ -644,6 +746,63 @@ export default function App() {
       {/* Close saved dropdown on outside click */}
       {showSaved && (
         <div style={{ position: "fixed", inset: 0, zIndex: 99 }} onClick={() => setShowSaved(false)} />
+      )}
+
+      {/* Prompt Guide Modal */}
+      {showPromptGuide && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px" }}
+          onClick={() => setShowPromptGuide(false)}>
+          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", width: "100%", maxWidth: "720px", maxHeight: "85vh", display: "flex", flexDirection: "column", boxShadow: "0 20px 60px rgba(0,0,0,0.8)" }}
+            onClick={(e) => e.stopPropagation()}>
+            {/* Modal header */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: "1px solid var(--border)" }}>
+              <div>
+                <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--text)" }}>🤖 AI Prompt Guide</div>
+                <div style={{ fontSize: "11px", color: "var(--text-muted)", marginTop: "2px" }}>Copy this prompt into ChatGPT, Gemini, Claude, or any AI model</div>
+              </div>
+              <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                <button onClick={handleCopyPrompt} style={{
+                  padding: "6px 16px", borderRadius: "var(--radius-sm)", fontSize: "12px", fontWeight: 600,
+                  background: promptCopied ? "#0d2e1a" : "var(--accent)",
+                  color: promptCopied ? "var(--success)" : "#fff",
+                  border: `1px solid ${promptCopied ? "#166534" : "transparent"}`,
+                  transition: "all 0.15s", cursor: "pointer",
+                }}>{promptCopied ? "✓ Copied!" : "Copy Prompt"}</button>
+                <button onClick={() => setShowPromptGuide(false)} style={{ background: "transparent", border: "none", color: "var(--text-muted)", fontSize: "18px", lineHeight: 1, padding: "4px 8px", cursor: "pointer" }}>×</button>
+              </div>
+            </div>
+
+            {/* Color palette legend */}
+            <div style={{ padding: "12px 20px", borderBottom: "1px solid var(--border)", display: "flex", flexWrap: "wrap", gap: "6px" }}>
+              {[
+                { label: "start",      bg: "#0d4a25", border: "#22c55e", color: "#4ade80" },
+                { label: "end",        bg: "#0f3566", border: "#3b82f6", color: "#93c5fd" },
+                { label: "step",       bg: "#2a2d3e", border: "#6366f1", color: "#a5b4fc" },
+                { label: "decision",   bg: "#3d3000", border: "#f59e0b", color: "#fcd34d" },
+                { label: "handoff",    bg: "#28285a", border: "#818cf8", color: "#c7d2fe" },
+                { label: "approval",   bg: "#163d20", border: "#22c55e", color: "#86efac" },
+                { label: "system",     bg: "#0f3352", border: "#38bdf8", color: "#7dd3fc" },
+                { label: "external",   bg: "#2a2a40", border: "#94a3b8", color: "#cbd5e1" },
+                { label: "warning",    bg: "#4a3800", border: "#ffc107", color: "#ffd54f" },
+                { label: "unresolved", bg: "#4a1010", border: "#ef4444", color: "#fca5a5" },
+              ].map(({ label, bg, border, color }) => (
+                <span key={label} style={{ padding: "3px 10px", borderRadius: "4px", fontSize: "10px", fontWeight: 600, background: bg, border: `1px solid ${border}`, color }}>{label}</span>
+              ))}
+            </div>
+
+            {/* Prompt text */}
+            <div style={{ flex: 1, overflow: "auto", padding: "16px 20px" }}>
+              <pre style={{ margin: 0, fontSize: "11px", lineHeight: 1.7, color: "var(--text-muted)", fontFamily: "var(--font-mono)", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{PROMPT_TEMPLATE}</pre>
+            </div>
+
+            {/* Usage tips */}
+            <div style={{ padding: "12px 20px", borderTop: "1px solid var(--border)", background: "var(--surface2)", borderRadius: "0 0 var(--radius-lg) var(--radius-lg)" }}>
+              <div style={{ fontSize: "10px", color: "var(--text-dim)", lineHeight: 1.7 }}>
+                <strong style={{ color: "var(--text-muted)" }}>How to use:</strong> Paste this as the System Prompt (or "Instructions") in your AI tool of choice, then describe your workflow in the user message. The AI will generate a valid JSON you can paste directly into the editor.
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

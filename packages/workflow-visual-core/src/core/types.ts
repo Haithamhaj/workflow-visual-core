@@ -54,6 +54,13 @@ export type EdgeStatus = "confirmed" | "assumed" | "warning" | "unresolved";
 
 // ── Node ──────────────────────────────────────────────────
 
+export interface NodeColorStyle {
+  bg: string;
+  border: string;
+  color: string;
+  radius?: string;
+}
+
 export interface WorkflowGraphNode {
   id: string;
   label: string;
@@ -63,6 +70,7 @@ export interface WorkflowGraphNode {
   layer?: string;
   status?: NodeStatus;
   markers?: string[];
+  colors?: NodeColorStyle;
   metadata?: Record<string, unknown>;
 }
 

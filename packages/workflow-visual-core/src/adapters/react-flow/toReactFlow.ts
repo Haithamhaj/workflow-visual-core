@@ -23,11 +23,13 @@ export function nodeColors(nodeType: NodeType, status?: string): NodeColors {
   const c = (bg: string, border: string, color: string, radius = "6px"): NodeColors => ({ bg, border, color, radius });
 
   // All backgrounds must be clearly above the canvas (#1c1c20) so nodes are visible
-  if (status === "warning" || nodeType === "warning")         return c("#4a3800", "#ffc107", "#ffd54f");
-  if (status === "unresolved" || nodeType === "unresolved")   return c("#4a1010", "#ef4444", "#fca5a5");
-  if (status === "assumed")                                   return c("#0f3d4a", "#22d3ee", "#7ae8ff");
-  if (nodeType === "start")                                   return c("#0a3d1f", "#22c55e", "#4ade80", "24px");
-  if (nodeType === "end")                                     return c("#0c2d5c", "#3b82f6", "#93c5fd", "24px");
+  if (status === "warning" || nodeType === "warning")              return c("#4a3800", "#ffc107", "#ffd54f");
+  if (status === "unresolved" || nodeType === "unresolved")        return c("#4a1010", "#ef4444", "#fca5a5");
+  if (status === "assumed")                                        return c("#1a3a4a", "#22d3ee", "#7ae8ff");
+  if (status === "external_unvalidated")                           return c("#2a2a40", "#94a3b8", "#cbd5e1");
+  if (status === "out_of_scope")                                   return c("#2a2a2a", "#6b7280", "#9ca3af");
+  if (nodeType === "start")                                   return c("#0d4a25", "#22c55e", "#4ade80", "24px");
+  if (nodeType === "end")                                     return c("#0f3566", "#3b82f6", "#93c5fd", "24px");
   if (nodeType === "decision")                                return c("#3d3000", "#f59e0b", "#fcd34d");
   if (nodeType === "step")                                    return c("#2a2d3e", "#6366f1", "#a5b4fc");
   if (nodeType === "handoff")                                 return c("#28285a", "#818cf8", "#c7d2fe");
@@ -199,7 +201,9 @@ export function toReactFlow(
       status: node.status,
       markers: node.markers,
       originalNode: node,
-      colors: nodeColors(node.nodeType, node.status),
+      colors: node.colors
+        ? { bg: node.colors.bg, border: node.colors.border, color: node.colors.color, radius: node.colors.radius ?? "6px" }
+        : nodeColors(node.nodeType, node.status),
     },
     style: {},
   }));

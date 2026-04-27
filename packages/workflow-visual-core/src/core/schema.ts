@@ -40,6 +40,17 @@ export const workflowGraphSchema = {
             enum: ["confirmed", "assumed", "warning", "unresolved", "external_unvalidated", "out_of_scope"],
           },
           markers: { type: "array", items: { type: "string" } },
+          colors: {
+            type: "object",
+            properties: {
+              bg: { type: "string" },
+              border: { type: "string" },
+              color: { type: "string" },
+              radius: { type: "string" },
+            },
+            required: ["bg", "border", "color"],
+            additionalProperties: false,
+          },
           metadata: { type: "object" },
         },
         additionalProperties: true,
