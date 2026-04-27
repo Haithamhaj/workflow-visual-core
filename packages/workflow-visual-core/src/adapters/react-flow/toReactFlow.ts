@@ -15,53 +15,26 @@ function mapNodeType(_nodeType: NodeType): string {
   return "default";
 }
 
-// ── Node style hints by type ──────────────────────────────
+// ── Node color palette by type ────────────────────────────
 
-function nodeStyle(nodeType: NodeType, status?: string): Record<string, string | number> {
-  // Use React Flow CSS variables so styles apply to the inner node element,
-  // not just the outer wrapper (which colorMode="dark" would override otherwise).
-  const vars = (bg: string, border: string, color: string, radius = "6px"): Record<string, string> => ({
-    "--xy-node-background-color": bg,
-    "--xy-node-border-color": border,
-    "--xy-node-color": color,
-    "--xy-node-border-radius": radius,
-  });
+export type NodeColors = { bg: string; border: string; color: string; radius: string };
 
-  if (status === "warning" || nodeType === "warning") {
-    return vars("#3d2e00", "#ffc107", "#ffc107");
-  }
-  if (status === "unresolved" || nodeType === "unresolved") {
-    return vars("#3d0e0e", "#dc3545", "#ff8a8a");
-  }
-  if (status === "assumed") {
-    return vars("#0c2a30", "#17a2b8", "#63d9ef");
-  }
-  if (nodeType === "start") {
-    return vars("#0d2e1a", "#28a745", "#4cde8a", "24px");
-  }
-  if (nodeType === "end") {
-    return vars("#0a1e3d", "#3b82f6", "#7cb8ff", "24px");
-  }
-  if (nodeType === "decision") {
-    return vars("#2e2500", "#f9a825", "#ffd54f");
-  }
-  if (nodeType === "handoff") {
-    return vars("#1a1c3a", "#5c6bc0", "#9fa8da");
-  }
-  if (nodeType === "approval") {
-    return vars("#1a2a1a", "#28a745", "#6fcf97");
-  }
-  if (nodeType === "external" || nodeType === "interface") {
-    return vars("#1e1e22", "#6c757d", "#adb5bd");
-  }
-  if (nodeType === "system") {
-    return vars("#0a1929", "#1976d2", "#64b5f6");
-  }
-  if (nodeType === "note") {
-    return vars("#1e1a00", "#f9a825", "#ffd54f");
-  }
+export function nodeColors(nodeType: NodeType, status?: string): NodeColors {
+  const c = (bg: string, border: string, color: string, radius = "6px"): NodeColors => ({ bg, border, color, radius });
 
-  return vars("#2a2a35", "#4a4a58", "#e8e8f0");
+  if (status === "warning" || nodeType === "warning")         return c("#3d2e00", "#ffc107", "#ffc107");
+  if (status === "unresolved" || nodeType === "unresolved")   return c("#3d0e0e", "#dc3545", "#ff8a8a");
+  if (status === "assumed")                                   return c("#0c2a30", "#17a2b8", "#63d9ef");
+  if (nodeType === "start")                                   return c("#0d2e1a", "#28a745", "#4cde8a", "24px");
+  if (nodeType === "end")                                     return c("#0a1e3d", "#3b82f6", "#7cb8ff", "24px");
+  if (nodeType === "decision")                                return c("#2e2500", "#f9a825", "#ffd54f");
+  if (nodeType === "handoff")                                 return c("#1a1c3a", "#5c6bc0", "#9fa8da");
+  if (nodeType === "approval")                                return c("#1a2a1a", "#28a745", "#6fcf97");
+  if (nodeType === "external" || nodeType === "interface")    return c("#1e1e22", "#6c757d", "#adb5bd");
+  if (nodeType === "system")                                  return c("#0a1929", "#1976d2", "#64b5f6");
+  if (nodeType === "note")                                    return c("#1e1a00", "#f9a825", "#ffd54f");
+
+  return c("#2a2a35", "#4a4a58", "#e8e8f0");
 }
 
 // ── Simple layered layout ─────────────────────────────────
@@ -224,8 +197,9 @@ export function toReactFlow(
       status: node.status,
       markers: node.markers,
       originalNode: node,
+      colors: nodeColors(node.nodeType, node.status),
     },
-    style: nodeStyle(node.nodeType, node.status),
+    style: {},
   }));
 
   const edges: ReactFlowEdgeLike[] = graph.edges.map((edge) => ({

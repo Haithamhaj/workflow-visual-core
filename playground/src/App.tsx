@@ -1,14 +1,17 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
   ReactFlow,
   Background,
   Controls,
   MiniMap,
+  Handle,
+  Position,
   useNodesState,
   useEdgesState,
   type Node,
   type Edge,
   type ReactFlowInstance,
+  type NodeProps,
 } from "@xyflow/react";
 import "@xyflow/react/dist/base.css";
 import mermaid from "mermaid";
@@ -67,6 +70,33 @@ status options: confirmed, assumed, warning, unresolved, external_unvalidated, o
 Use meaningful IDs (no spaces). Make the diagram detailed and accurate based on the user's description.`;
 
 const DEFAULT_EXAMPLE = Object.keys(EXAMPLES)[0]!;
+
+// ── Custom node — bypasses React Flow CSS variable system ─────────────────────
+type NodeColors = { bg: string; border: string; color: string; radius: string };
+
+function WorkflowNode({ data }: NodeProps) {
+  const c = (data as { colors?: NodeColors }).colors;
+  return (
+    <div style={{
+      background: c?.bg ?? "#2a2a35",
+      border: `1.5px solid ${c?.border ?? "#4a4a58"}`,
+      color: c?.color ?? "#e8e8f0",
+      borderRadius: c?.radius ?? "6px",
+      padding: "8px 14px",
+      minWidth: "120px",
+      textAlign: "center",
+      fontSize: "12px",
+      lineHeight: 1.4,
+      fontFamily: "var(--font-sans)",
+    }}>
+      <Handle type="target" position={Position.Top}
+        style={{ background: c?.border ?? "#6e56cf", border: "none", width: 8, height: 8 }} />
+      {String((data as { label?: unknown }).label ?? "")}
+      <Handle type="source" position={Position.Bottom}
+        style={{ background: c?.border ?? "#6e56cf", border: "none", width: 8, height: 8 }} />
+    </div>
+  );
+}
 
 let scratchEl: HTMLDivElement | null = null;
 function getScratch(): HTMLDivElement {
@@ -139,6 +169,7 @@ export default function App() {
   const renderGenRef = useRef(0);
   const mermaidGenRef = useRef(0);
   const rfInstanceRef = useRef<ReactFlowInstance | null>(null);
+  const nodeTypes = useMemo(() => ({ default: WorkflowNode }), []);
 
   // Renders Mermaid SVG — call only when user explicitly requests it or diagram is small
   const triggerMermaidRender = useCallback(async (text: string) => {
@@ -592,8 +623,7 @@ export default function App() {
                 <ReactFlow nodes={rfNodes} edges={rfEdges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange}
                   onInit={(instance) => { rfInstanceRef.current = instance; }}
                   fitView fitViewOptions={{ padding: 0.3 }}
-                  colorMode="dark"
-                  style={{ "--xy-background-color": "#1c1c20", "--xy-minimap-background-color": "#141416" } as React.CSSProperties}
+                  nodeTypes={nodeTypes}
                   proOptions={{ hideAttribution: false }}>
                   <Background color="#2a2a30" gap={20} size={1} />
                   <Controls />
