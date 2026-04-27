@@ -137,8 +137,8 @@ function formatDate(iso: string): string {
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
-// Auto-render Mermaid only for small diagrams (to avoid freezing)
-const AUTO_RENDER_NODE_LIMIT = 8;
+// Never auto-render Mermaid — user must click the button to avoid main-thread blocking
+const AUTO_RENDER_NODE_LIMIT = 0;
 
 export default function App() {
   const [jsonInput, setJsonInput] = useState<string>(EXAMPLES[DEFAULT_EXAMPLE]!);
