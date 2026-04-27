@@ -587,10 +587,13 @@ export default function App() {
             )}
 
             {activeTab === "reactflow" && (
-              <div style={{ position: "absolute", inset: 0 }}>
+              <div style={{ position: "absolute", inset: 0, background: "#1c1c20" }}>
                 <ReactFlow nodes={rfNodes} edges={rfEdges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange}
                   onInit={(instance) => { rfInstanceRef.current = instance; }}
-                  fitView fitViewOptions={{ padding: 0.3 }} proOptions={{ hideAttribution: false }}>
+                  fitView fitViewOptions={{ padding: 0.3 }}
+                  colorMode="dark"
+                  style={{ "--xy-background-color": "#1c1c20", "--xy-minimap-background-color": "#141416" } as React.CSSProperties}
+                  proOptions={{ hideAttribution: false }}>
                   <Background color="#2a2a30" gap={20} size={1} />
                   <Controls />
                   <MiniMap nodeColor="#6e56cf" maskColor="rgba(0,0,0,0.6)" />

@@ -27,37 +27,37 @@ function nodeStyle(nodeType: NodeType, status?: string): Record<string, string |
 
   // Status overrides
   if (status === "warning" || nodeType === "warning") {
-    return { ...base, background: "#fff3cd", border: "2px solid #ffc107", color: "#856404" };
+    return { ...base, background: "#3d2e00", border: "2px solid #ffc107", color: "#ffc107" };
   }
   if (status === "unresolved" || nodeType === "unresolved") {
-    return { ...base, background: "#f8d7da", border: "2px solid #dc3545", color: "#721c24" };
+    return { ...base, background: "#3d0e0e", border: "2px solid #dc3545", color: "#ff8a8a" };
   }
   if (status === "assumed") {
-    return { ...base, background: "#d1ecf1", border: "2px dashed #17a2b8", color: "#0c5460" };
+    return { ...base, background: "#0c2a30", border: "2px dashed #17a2b8", color: "#63d9ef" };
   }
   if (nodeType === "start") {
-    return { ...base, background: "#d4edda", border: "2px solid #28a745", borderRadius: "24px" };
+    return { ...base, background: "#0d2e1a", border: "2px solid #28a745", borderRadius: "24px", color: "#4cde8a" };
   }
   if (nodeType === "end") {
-    return { ...base, background: "#cce5ff", border: "2px solid #004085", borderRadius: "24px" };
+    return { ...base, background: "#0a1e3d", border: "2px solid #3b82f6", borderRadius: "24px", color: "#7cb8ff" };
   }
   if (nodeType === "decision") {
-    return { ...base, background: "#fff9c4", border: "2px solid #f9a825", transform: "rotate(0deg)" };
+    return { ...base, background: "#2e2500", border: "2px solid #f9a825", color: "#ffd54f" };
   }
   if (nodeType === "handoff") {
-    return { ...base, background: "#e8eaf6", border: "2px solid #5c6bc0" };
+    return { ...base, background: "#1a1c3a", border: "2px solid #5c6bc0", color: "#9fa8da" };
   }
   if (nodeType === "external" || nodeType === "interface") {
-    return { ...base, background: "#e2e3e5", border: "2px dashed #6c757d" };
+    return { ...base, background: "#1e1e22", border: "2px dashed #6c757d", color: "#adb5bd" };
   }
   if (nodeType === "system") {
-    return { ...base, background: "#e3f2fd", border: "2px solid #1976d2" };
+    return { ...base, background: "#0a1929", border: "2px solid #1976d2", color: "#64b5f6" };
   }
   if (nodeType === "note") {
-    return { ...base, background: "#fffde7", border: "1px solid #f9a825", fontStyle: "italic" };
+    return { ...base, background: "#1e1a00", border: "1px solid #f9a825", fontStyle: "italic", color: "#ffd54f" };
   }
 
-  return { ...base, background: "#ffffff", border: "1px solid #dee2e6" };
+  return { ...base, background: "#2a2a35", border: "1px solid #4a4a58", color: "#e8e8f0" };
 }
 
 // ── Simple layered layout ─────────────────────────────────
