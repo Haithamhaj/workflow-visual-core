@@ -1,0 +1,5 @@
+{
+  "buildCommand": "cd .. && npm run build --workspace=packages/workflow-visual-core && npm run build --workspace=playground",
+  "outputDirectory": "dist",
+  "installCommand": "cd .. && npm install"
+}
