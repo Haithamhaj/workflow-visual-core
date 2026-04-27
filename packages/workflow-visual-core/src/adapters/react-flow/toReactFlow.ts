@@ -53,6 +53,7 @@ function computeLayeredLayout(
   const nodeIds = new Set(nodes.map((n) => n.id));
   const adjOut = new Map<string, string[]>();
   const adjIn = new Map<string, string[]>();
+  const maxLevelUpdates = Math.max(nodes.length * nodes.length, nodes.length);
 
   for (const n of nodes) {
     adjOut.set(n.id, []);
@@ -60,6 +61,9 @@ function computeLayeredLayout(
   }
 
   for (const e of edges) {
+    if (e.edgeType === "feedback") {
+      continue;
+    }
     if (nodeIds.has(e.from) && nodeIds.has(e.to)) {
       adjOut.get(e.from)!.push(e.to);
       adjIn.get(e.to)!.push(e.from);
@@ -86,14 +90,19 @@ function computeLayeredLayout(
     queue.push(firstId);
   }
 
+  let levelUpdates = 0;
   while (queue.length > 0) {
     const current = queue.shift()!;
     const currentLevel = levels.get(current) ?? 0;
     for (const neighbor of adjOut.get(current) ?? []) {
       const existingLevel = levels.get(neighbor) ?? -1;
       if (existingLevel < currentLevel + 1) {
+        if (levelUpdates >= maxLevelUpdates) {
+          continue;
+        }
         levels.set(neighbor, currentLevel + 1);
         queue.push(neighbor);
+        levelUpdates++;
       }
     }
   }

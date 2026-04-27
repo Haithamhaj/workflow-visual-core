@@ -108,4 +108,60 @@ describe("toReactFlow", () => {
     const endNode = output.nodes.find((n) => n.id === "end_a");
     expect(startNode?.position.y).toBeLessThan(endNode?.position.y ?? Infinity);
   });
+
+  it("handles feedback edges in layered layout without dropping the edge", () => {
+    const feedbackGraph: WorkflowGraph = {
+      graphId: "feedback-cycle-001",
+      title: "Feedback Cycle",
+      version: "1.0.0",
+      graphType: "architecture",
+      nodes: [
+        { id: "user", label: "User", nodeType: "external" },
+        { id: "interface", label: "Interface", nodeType: "interface" },
+        { id: "system", label: "System", nodeType: "system" },
+      ],
+      edges: [
+        { id: "e1", from: "user", to: "interface", edgeType: "sequence" },
+        { id: "e2", from: "interface", to: "system", edgeType: "sequence" },
+        { id: "e3", from: "system", to: "interface", edgeType: "feedback", label: "Response" },
+      ],
+    };
+
+    const output = toReactFlow(feedbackGraph, { layout: "layered" });
+    const feedbackEdge = output.edges.find((e) => e.id === "e3");
+
+    expect(output.nodes).toHaveLength(3);
+    expect(output.edges).toHaveLength(3);
+    expect(feedbackEdge?.source).toBe("system");
+    expect(feedbackEdge?.target).toBe("interface");
+    expect(feedbackEdge?.type).toBe("smoothstep");
+  });
+
+  it("guards layered layout against non-feedback cycles", () => {
+    const cyclicGraph: WorkflowGraph = {
+      graphId: "generic-cycle-001",
+      title: "Generic Cycle",
+      version: "1.0.0",
+      graphType: "generic",
+      nodes: [
+        { id: "a", label: "A", nodeType: "step" },
+        { id: "b", label: "B", nodeType: "step" },
+        { id: "c", label: "C", nodeType: "step" },
+      ],
+      edges: [
+        { id: "e1", from: "a", to: "b", edgeType: "sequence" },
+        { id: "e2", from: "b", to: "c", edgeType: "sequence" },
+        { id: "e3", from: "c", to: "a", edgeType: "sequence" },
+      ],
+    };
+
+    const output = toReactFlow(cyclicGraph, { layout: "layered" });
+
+    expect(output.nodes).toHaveLength(3);
+    expect(output.edges).toHaveLength(3);
+    for (const node of output.nodes) {
+      expect(Number.isFinite(node.position.x)).toBe(true);
+      expect(Number.isFinite(node.position.y)).toBe(true);
+    }
+  });
 });
