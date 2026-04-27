@@ -8,8 +8,9 @@ import {
   useEdgesState,
   type Node,
   type Edge,
+  type ReactFlowInstance,
 } from "@xyflow/react";
-import "@xyflow/react/dist/style.css";
+import "@xyflow/react/dist/base.css";
 import mermaid from "mermaid";
 import { validateWorkflowGraph, toMermaid, toReactFlow } from "workflow-visual-core";
 import type { ValidationError } from "workflow-visual-core";
@@ -136,6 +137,7 @@ export default function App() {
   const [showSaved, setShowSaved] = useState(false);
 
   const renderGenRef = useRef(0);
+  const rfInstanceRef = useRef<ReactFlowInstance | null>(null);
 
   // Renders Mermaid SVG — call only when user explicitly requests it or diagram is small
   const triggerMermaidRender = useCallback(async (text: string) => {
@@ -207,6 +209,13 @@ export default function App() {
     const t = setTimeout(() => processGraph(jsonInput), 350);
     return () => clearTimeout(t);
   }, [jsonInput, processGraph]);
+
+  // Re-fit view whenever nodes change (fitView on <ReactFlow> only fires on mount)
+  useEffect(() => {
+    if (rfNodes.length > 0) {
+      setTimeout(() => rfInstanceRef.current?.fitView({ padding: 0.3 }), 50);
+    }
+  }, [rfNodes]);
 
   const handleExampleChange = (name: string) => {
     setSelectedExample(name);
@@ -578,12 +587,13 @@ export default function App() {
             )}
 
             {activeTab === "reactflow" && (
-              <div style={{ position: "absolute", inset: 0, background: "#1c1c20" }}>
+              <div style={{ position: "absolute", inset: 0 }}>
                 <ReactFlow nodes={rfNodes} edges={rfEdges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange}
-                  fitView fitViewOptions={{ padding: 0.3 }} colorMode="dark" style={{ background: "#1c1c20" }} proOptions={{ hideAttribution: false }}>
+                  onInit={(instance) => { rfInstanceRef.current = instance; }}
+                  fitView fitViewOptions={{ padding: 0.3 }} proOptions={{ hideAttribution: false }}>
                   <Background color="#2a2a30" gap={20} size={1} />
-                  <Controls style={{ background: "#141416", border: "1px solid #2a2a30" }} />
-                  <MiniMap style={{ background: "#141416", border: "1px solid #2a2a30" }} nodeColor="#6e56cf" maskColor="rgba(0,0,0,0.6)" />
+                  <Controls />
+                  <MiniMap nodeColor="#6e56cf" maskColor="rgba(0,0,0,0.6)" />
                 </ReactFlow>
               </div>
             )}

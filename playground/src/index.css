@@ -77,11 +77,69 @@ textarea {
   to { transform: rotate(360deg); }
 }
 
-/* Force dark text on React Flow nodes (they have light bg colors) */
+/* React Flow dark theme */
+.react-flow {
+  background: #1c1c20;
+}
+.react-flow__pane {
+  cursor: grab;
+}
+.react-flow__pane.dragging {
+  cursor: grabbing;
+}
+.react-flow__edge-path,
+.react-flow__connection-path {
+  stroke: #adb5bd;
+  stroke-width: 1.5;
+}
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: #6e56cf;
+}
 .react-flow__node {
   color: #111827;
 }
-.react-flow__node .react-flow__handle {
+.react-flow__node.selected > div {
+  outline: 2px solid #6e56cf;
+  outline-offset: 2px;
+}
+.react-flow__handle {
   background: #6e56cf;
   border-color: #6e56cf;
+  width: 8px;
+  height: 8px;
+}
+.react-flow__controls {
+  background: #141416;
+  border: 1px solid #2a2a30;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.react-flow__controls-button {
+  background: #141416;
+  border-bottom: 1px solid #2a2a30;
+  color: #7a7a8a;
+  width: 26px;
+  height: 26px;
+  padding: 4px;
+}
+.react-flow__controls-button:hover {
+  background: #1c1c20;
+  color: #e8e8f0;
+}
+.react-flow__controls-button svg {
+  fill: currentColor;
+  max-width: 12px;
+  max-height: 12px;
+}
+.react-flow__minimap {
+  background: #141416;
+  border: 1px solid #2a2a30;
+  border-radius: 6px;
+}
+.react-flow__attribution {
+  background: transparent;
+  color: #4a4a58;
+}
+.react-flow__attribution a {
+  color: #4a4a58;
 }
