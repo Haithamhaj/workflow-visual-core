@@ -95,6 +95,16 @@ textarea {
 .react-flow__edge.selected .react-flow__edge-path {
   stroke: #6e56cf;
 }
+.react-flow__edge-textbg {
+  fill: #1c1c20;
+  stroke: #3d3d46;
+  stroke-width: 1px;
+}
+.react-flow__edge-text {
+  fill: #e8e8f0;
+  font-family: var(--font-sans);
+  font-size: 11px;
+}
 .react-flow__node {
   color: #111827;
 }
